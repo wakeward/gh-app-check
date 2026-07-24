@@ -1,0 +1,44 @@
+---
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: "friday"
+      time: "08:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 10
+    # 48h minimum age before a version-update PR is opened, so we never pull
+    # in a just-published (and potentially compromised) release. Security
+    # updates are exempt from cooldown by design and still open immediately.
+    cooldown:
+      default-days: 2
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      gha:
+        patterns:
+          - "*"
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: "friday"
+      time: "08:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 2
+    allow:
+      # direct and indirect updates
+      - dependency-type: "all"
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      gomod:
+        patterns:
+          - "*"
