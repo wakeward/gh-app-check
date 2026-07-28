@@ -47,6 +47,7 @@ By default, the tool outputs a human-readable terminal table. You can modify thi
 - **Phase 1:** Control Plane auditor - `GET /orgs/{org}/installations` fetching, pagination, rules engine (blast radius, toxic permissions).
 - **Phase 2:** Execution Plane tracer - Code Search API integration, YAML AST parsing of Actions workflows, `.pem`/hardcoded-key detection.
 - **Phase 3:** CI/CD integration - `--strict` exit codes, SARIF output for GitHub Advanced Security.
+- **Phase 4 (backlog, not yet scoped):** permission drift guard - track how installed apps' permissions change over time and alert on high-risk escalations, inspired by [google/capslock](https://github.com/google/capslock)'s capability-diffing approach for Go packages. See [docs/BACKLOG.md](docs/BACKLOG.md) for open questions.
 
 ## Security & Supply Chain
 
