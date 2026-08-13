@@ -1,8 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"os"
 
+	graphdata "github.com/wakeward/gh-app-graph/pkg/data"
+	"github.com/wakeward/gh-app-check/pkg/eval"
+	"github.com/wakeward/gh-app-check/pkg/ghclient"
+	"github.com/wakeward/gh-app-check/pkg/output"
+	"github.com/wakeward/gh-app-check/pkg/rules"
 	"github.com/spf13/cobra"
 )
 
@@ -16,12 +23,42 @@ rules engine (blast radius, toxic permissions).`,
 	RunE: func(_ *cobra.Command, args []string) error {
 		org := args[0]
 
-		if _, err := resolveToken(); err != nil {
+		token, err := resolveToken()
+		if err != nil {
 			return err
 		}
+		client, err := ghclient.New(token)
+		if err != nil {
+			return fmt.Errorf("create github client: %w", err)
+		}
 
-		// TODO(Phase 1): fetch installations via pkg/ghclient, evaluate via
-		// pkg/eval, and render via pkg/output using the --format flag.
-		return fmt.Errorf("org audit for %q is not implemented yet (Phase 1); see docs/INSTALLATION.md", org)
+		installations, err := ghclient.ListOrgInstallations(context.Background(), client, org)
+		if err != nil {
+			return err
+		}
+		toxic, err := graphdata.LoadToxicCombinations()
+		if err != nil {
+			return fmt.Errorf("load toxic combinations: %w", err)
+		}
+
+		results := make([]eval.AppAuditResult, 0, len(installations))
+		for _, inst := range installations {
+			results = append(results, eval.Evaluate(
+				inst.Slug,
+				inst.Name,
+				org,
+				rules.Installation{
+					RepositorySelection: inst.RepositorySelection,
+					Permissions:         inst.Permissions,
+				},
+				toxic,
+			))
+		}
+
+		writer, err := output.ForFormat(format)
+		if err != nil {
+			return err
+		}
+		return writer.Write(os.Stdout, results)
 	},
 }

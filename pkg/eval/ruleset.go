@@ -1,6 +1,31 @@
 package eval
 
-import "github.com/wakeward/gh-app-check/pkg/rules"
+import (
+	"fmt"
+
+	grapheval "github.com/wakeward/gh-app-graph/pkg/eval"
+	graphmodel "github.com/wakeward/gh-app-graph/pkg/model"
+	"github.com/wakeward/gh-app-check/pkg/rules"
+)
+
+// ToxicMatch records one toxic combination satisfied by an installation.
+type ToxicMatch struct {
+	ID        string `json:"id"`
+	Technique string `json:"technique"`
+	Blast     string `json:"blast_radius"`
+}
+
+// AppAuditResult is the outcome of evaluating one GitHub App installation
+// against the least-privilege rules engine and toxic-combination catalog.
+type AppAuditResult struct {
+	AppSlug       string       `json:"app_slug"`
+	AppName       string       `json:"app_name,omitempty"`
+	Owner         string       `json:"owner"`
+	RepoSelection string       `json:"repo_selection"` // "all" or "selected"
+	RiskLevel     string       `json:"risk_level"`     // "CRITICAL", "HIGH", "WARN", "PASS"
+	Violations    []string     `json:"violations"`
+	ToxicMatches  []ToxicMatch `json:"toxic_matches,omitempty"`
+}
 
 // namedRule pairs a rule predicate with the violation message to record and
 // the risk level it contributes when triggered.
@@ -23,12 +48,12 @@ func ControlPlaneRuleset() []namedRule {
 	}
 }
 
-// Evaluate runs every rule in the ruleset against inst and returns the
-// aggregated AppAuditResult. The highest risk level among triggered rules
-// wins; the result is "PASS" if none trigger.
-func Evaluate(appSlug, owner string, inst rules.Installation) AppAuditResult {
+// Evaluate runs the control-plane ruleset and toxic-combination catalog
+// against inst and returns the aggregated AppAuditResult.
+func Evaluate(appSlug, appName, owner string, inst rules.Installation, toxic []graphmodel.ToxicCombination) AppAuditResult {
 	result := AppAuditResult{
 		AppSlug:       appSlug,
+		AppName:       appName,
 		Owner:         owner,
 		RepoSelection: inst.RepositorySelection,
 		RiskLevel:     "PASS",
@@ -38,11 +63,45 @@ func Evaluate(appSlug, owner string, inst rules.Installation) AppAuditResult {
 	for _, rule := range ControlPlaneRuleset() {
 		if rule.Predicate(inst) {
 			result.Violations = append(result.Violations, rule.Message)
-			if riskRank[rule.Risk] > riskRank[result.RiskLevel] {
-				result.RiskLevel = rule.Risk
-			}
+			raiseRisk(&result, rule.Risk)
+		}
+	}
+
+	if len(toxic) > 0 {
+		toxicResult := grapheval.Evaluate(graphmodel.AppPermissionSet{Permissions: inst.Permissions}, toxic)
+		for _, match := range toxicResult.Matches {
+			result.ToxicMatches = append(result.ToxicMatches, ToxicMatch{
+				ID:        match.Combination.ID,
+				Technique: match.Combination.Technique,
+				Blast:     string(match.Combination.BlastRadius),
+			})
+			result.Violations = append(result.Violations, fmt.Sprintf(
+				"toxic combination: %s (%s)",
+				match.Combination.Technique,
+				match.Combination.BlastRadius,
+			))
+			raiseRisk(&result, blastToRisk(match.Combination.BlastRadius))
 		}
 	}
 
 	return result
+}
+
+func raiseRisk(result *AppAuditResult, risk string) {
+	if riskRank[risk] > riskRank[result.RiskLevel] {
+		result.RiskLevel = risk
+	}
+}
+
+func blastToRisk(blast graphmodel.BlastRadius) string {
+	switch blast {
+	case graphmodel.BlastRadiusCritical:
+		return "CRITICAL"
+	case graphmodel.BlastRadiusHigh:
+		return "HIGH"
+	case graphmodel.BlastRadiusMedium:
+		return "WARN"
+	default:
+		return "PASS"
+	}
 }

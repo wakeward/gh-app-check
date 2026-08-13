@@ -3,6 +3,7 @@ package output
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/wakeward/gh-app-check/pkg/eval"
 )
@@ -10,9 +11,28 @@ import (
 // MarkdownWriter renders results as a Markdown table, for PR comments and issues.
 type MarkdownWriter struct{}
 
-// Write is a placeholder until Phase 1 wires in real installation data.
+// Write renders a Markdown table of audit results.
 func (MarkdownWriter) Write(w io.Writer, results []eval.AppAuditResult) error {
-	// TODO(Phase 1): render a Markdown table.
-	_, err := fmt.Fprintf(w, "%d result(s) (markdown rendering not implemented yet)\n", len(results))
-	return err
+	fmt.Fprintln(w, "| App | Risk | Repos | Violations |")
+	fmt.Fprintln(w, "| --- | --- | --- | --- |")
+	for _, result := range results {
+		app := result.AppSlug
+		if app == "" {
+			app = result.AppName
+		}
+		if app == "" {
+			app = "(unknown app)"
+		}
+		fmt.Fprintf(w, "| %s | %s | %s | %s |\n",
+			escapeCell(app),
+			result.RiskLevel,
+			result.RepoSelection,
+			escapeCell(strings.Join(result.Violations, "; ")),
+		)
+	}
+	return nil
+}
+
+func escapeCell(s string) string {
+	return strings.ReplaceAll(s, "|", "\\|")
 }

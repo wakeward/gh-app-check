@@ -9,7 +9,7 @@ gh-app-check is a `gh` CLI extension and security auditing tool designed to eval
 
 Unlike static configuration checkers, gh-app-check bridges the gap between the **Control Plane** (what permissions an app has) and the **Execution Plane** (how the app's token is actually generated and used in Actions workflows).
 
-> **Status:** this repository currently contains the secure-foundation scaffolding and a command skeleton. The Control Plane auditor (Phase 1), Execution Plane tracer (Phase 2), and CI/CD SARIF integration (Phase 3) are in active development - see [Implementation Phases](#implementation-phases) below.
+> **Status:** Phase 1 (`gh app-check org`) is implemented: org installation fetch, least-privilege rules, and toxic-combination checks via embedded data from [`gh-app-graph`](https://github.com/wakeward/gh-app-graph). Phase 2 (execution trace), Phase 3 (SARIF), and Phase 4 (drift guard) are not yet implemented - see [Implementation Phases](#implementation-phases) below.
 
 ## Documentation
 
@@ -43,8 +43,8 @@ By default, the tool outputs a human-readable terminal table. You can modify thi
 
 ## Implementation Phases
 
-- **Phase 0 (this repo, today):** secure foundation - LICENSE, SECURITY.md, branch protection, Dependabot, gosec/govulncheck as blocking CI checks, OpenSSF Scorecard workflow, command skeleton.
-- **Phase 1:** Control Plane auditor - `GET /orgs/{org}/installations` fetching, pagination, rules engine (blast radius, toxic permissions).
+- **Phase 0:** secure foundation - LICENSE, SECURITY.md, branch protection, Dependabot, gosec/govulncheck as blocking CI checks, OpenSSF Scorecard workflow, command skeleton.
+- **Phase 1 (implemented):** Control Plane auditor - `GET /orgs/{org}/installations` fetching, pagination, rules engine (blast radius, toxic permissions from `gh-app-graph`).
 - **Phase 2:** Execution Plane tracer - Code Search API integration, YAML AST parsing of Actions workflows, `.pem`/hardcoded-key detection.
 - **Phase 3:** CI/CD integration - `--strict` exit codes, SARIF output for GitHub Advanced Security.
 - **Phase 4 (backlog, not yet scoped):** permission drift guard - track how installed apps' permissions change over time and alert on high-risk escalations, inspired by [google/capslock](https://github.com/google/capslock)'s capability-diffing approach for Go packages. See [docs/BACKLOG.md](docs/BACKLOG.md) for open questions.

@@ -6,7 +6,10 @@ require (
 	github.com/cli/go-gh/v2 v2.13.0
 	github.com/google/go-github/v89 v89.0.0
 	github.com/spf13/cobra v1.10.2
+	github.com/wakeward/gh-app-graph v0.0.0
 )
+
+replace github.com/wakeward/gh-app-graph => ../github-app-permissions-graph
 
 require (
 	github.com/cli/safeexec v1.0.0 // indirect
