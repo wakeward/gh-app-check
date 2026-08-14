@@ -3,9 +3,9 @@ package eval
 import (
 	"fmt"
 
+	"github.com/wakeward/gh-app-check/pkg/rules"
 	grapheval "github.com/wakeward/gh-app-graph/pkg/eval"
 	graphmodel "github.com/wakeward/gh-app-graph/pkg/model"
-	"github.com/wakeward/gh-app-check/pkg/rules"
 )
 
 // ToxicMatch records one toxic combination satisfied by an installation.
@@ -15,16 +15,25 @@ type ToxicMatch struct {
 	Blast     string `json:"blast_radius"`
 }
 
+// NearMiss records a toxic combination one grant away from being satisfied.
+type NearMiss struct {
+	ID           string `json:"id"`
+	Technique    string `json:"technique"`
+	MissingGrant string `json:"missing_grant"`
+}
+
 // AppAuditResult is the outcome of evaluating one GitHub App installation
 // against the least-privilege rules engine and toxic-combination catalog.
 type AppAuditResult struct {
-	AppSlug       string       `json:"app_slug"`
-	AppName       string       `json:"app_name,omitempty"`
-	Owner         string       `json:"owner"`
-	RepoSelection string       `json:"repo_selection"` // "all" or "selected"
-	RiskLevel     string       `json:"risk_level"`     // "CRITICAL", "HIGH", "WARN", "PASS"
-	Violations    []string     `json:"violations"`
-	ToxicMatches  []ToxicMatch `json:"toxic_matches,omitempty"`
+	AppSlug         string       `json:"app_slug"`
+	AppName         string       `json:"app_name,omitempty"`
+	Owner           string       `json:"owner"`
+	RepoSelection   string       `json:"repo_selection"` // "all" or "selected"
+	WriteScopeCount int          `json:"write_scope_count"`
+	RiskLevel       string       `json:"risk_level"` // "CRITICAL", "HIGH", "WARN", "PASS"
+	Violations      []string     `json:"violations"`
+	ToxicMatches    []ToxicMatch `json:"toxic_matches"`
+	NearMisses      []NearMiss   `json:"near_misses"`
 }
 
 // namedRule pairs a rule predicate with the violation message to record and
@@ -38,13 +47,19 @@ type namedRule struct {
 // riskRank orders risk levels so the highest-severity triggered rule wins.
 var riskRank = map[string]int{"PASS": 0, "WARN": 1, "HIGH": 2, "CRITICAL": 3}
 
+// RiskRank returns the sort order for a risk level string.
+func RiskRank(level string) int {
+	return riskRank[level]
+}
+
 // ControlPlaneRuleset is the Phase 1 least-privilege rules engine described
 // in Design Spec §4.A.
 func ControlPlaneRuleset() []namedRule {
 	return []namedRule{
-		{rules.RepoSelectionAll, "installation has access to all repositories", "HIGH"},
+		{rules.RepoSelectionAllWithWrite, "installation has access to all repositories", "HIGH"},
+		{rules.RepoSelectionAllReadOnly, "installation has access to all repositories (read-only grants)", "WARN"},
 		{rules.AdministrationWrite, "installation has write access to administration", "CRITICAL"},
-		{rules.ExcessiveWriteScopes, "installation has more than 5 write-level scopes (god-mode)", "CRITICAL"},
+		{rules.ExcessiveWriteScopes, "installation has more than 5 write-level scopes (god-mode)", "HIGH"},
 	}
 }
 
@@ -52,12 +67,15 @@ func ControlPlaneRuleset() []namedRule {
 // against inst and returns the aggregated AppAuditResult.
 func Evaluate(appSlug, appName, owner string, inst rules.Installation, toxic []graphmodel.ToxicCombination) AppAuditResult {
 	result := AppAuditResult{
-		AppSlug:       appSlug,
-		AppName:       appName,
-		Owner:         owner,
-		RepoSelection: inst.RepositorySelection,
-		RiskLevel:     "PASS",
-		Violations:    []string{},
+		AppSlug:         appSlug,
+		AppName:         appName,
+		Owner:           owner,
+		RepoSelection:   inst.RepositorySelection,
+		WriteScopeCount: rules.WriteScopeCount(inst),
+		RiskLevel:       "PASS",
+		Violations:      []string{},
+		ToxicMatches:    []ToxicMatch{},
+		NearMisses:      []NearMiss{},
 	}
 
 	for _, rule := range ControlPlaneRuleset() {
@@ -82,6 +100,13 @@ func Evaluate(appSlug, appName, owner string, inst rules.Installation, toxic []g
 			))
 			raiseRisk(&result, blastToRisk(match.Combination.BlastRadius))
 		}
+		for _, near := range toxicResult.NearMisses {
+			result.NearMisses = append(result.NearMisses, NearMiss{
+				ID:           near.Combination.ID,
+				Technique:    near.Combination.Technique,
+				MissingGrant: formatMissingGrant(near.Missing[0]),
+			})
+		}
 	}
 
 	return result
@@ -104,4 +129,8 @@ func blastToRisk(blast graphmodel.BlastRadius) string {
 	default:
 		return "PASS"
 	}
+}
+
+func formatMissingGrant(grant graphmodel.PermissionGrant) string {
+	return fmt.Sprintf("%s:%s", grant.APIKey, grant.Access)
 }

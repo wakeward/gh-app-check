@@ -9,7 +9,7 @@ require (
 	github.com/wakeward/gh-app-graph v0.0.0
 )
 
-replace github.com/wakeward/gh-app-graph => ../github-app-permissions-graph
+replace github.com/wakeward/gh-app-graph => ../gh-app-graph
 
 require (
 	github.com/cli/safeexec v1.0.0 // indirect

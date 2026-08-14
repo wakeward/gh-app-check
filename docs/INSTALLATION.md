@@ -12,13 +12,21 @@ gh extension install wakeward/gh-app-check
 
 ### Prerequisites
 
-To query GitHub App installations across an organization, **you must be an Organization Owner**. Standard organization members will receive errors.
+Listing organization installations requires a token that can read organization
+data. In practice, **`read:org`** on a user token belonging to an **organization
+admin** has been enough to call `GET /orgs/{org}/installations`. GitHub may
+tighten this; treat 403/404 as an auth or role problem first.
 
-Additionally, your local `gh` CLI must be authenticated with the `admin:org` scope. If you are missing this scope, re-authenticate:
+- **Organization role:** org **admin** (not merely a repository admin) is the
+  practical minimum for org-wide installation listing.
+- **OAuth scope:** prefer `read:org` at minimum. Some docs mention `admin:org`;
+  re-authenticate if you see scope-related 403 errors:
 
 ```bash
-gh auth login --scopes "admin:org"
+gh auth login --scopes "read:org,repo"
 ```
+
+Organization **owners** always have sufficient access; admins often do as well.
 
 ## 2. Enterprise CI/CD Deployment (Recommended)
 
@@ -89,18 +97,21 @@ Error: failed to fetch installations: GET https://api.github.com/orgs/my-org/ins
 
 The GitHub API endpoint for listing organization installations is strictly locked down. This error means one of two things:
 
-1. **You are not an Organization Owner.** Standard members, even those with Admin rights on specific repositories, cannot view organization-wide app installations.
+1. **You lack org-wide visibility.** Repository admins cannot necessarily list organization-wide app installations.
 2. **Missing OAuth scopes:** your `gh` CLI token lacks the necessary permissions.
 
 **Resolution:**
 
-Ensure you are an Organization Owner. Then, re-authenticate your CLI to grant the admin scope:
+Ensure your account is an organization **admin** (or owner), then re-authenticate with at least `read:org`:
 
 ```bash
-gh auth login --scopes "admin:org"
+gh auth login --scopes "read:org,repo"
 ```
 
-### Secondary Rate Limit Exceeded during --trace
+### Secondary Rate Limit Exceeded during `--trace` (Phase 2 - not implemented)
+
+> **Note:** `gh app-check trace` is not implemented yet. The guidance below applies
+> to the planned Phase 2 command only.
 
 **Symptom:**
 
@@ -119,7 +130,9 @@ The CLI implements an exponential backoff strategy, but in massive organizations
 - Wait 5-10 minutes and try again.
 - If running in CI/CD, ensure you are authenticating with a GitHub App token, which has its own dedicated rate limit bucket separate from human users.
 
-### "No valid Actions workflows found" during Trace
+### "No valid Actions workflows found" during Trace (Phase 2 - not implemented)
+
+> **Note:** `gh app-check trace` is not implemented yet.
 
 **Cause:**
 

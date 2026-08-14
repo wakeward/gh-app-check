@@ -13,10 +13,13 @@ import (
 func TestPermissionsMap_FlattensStruct(t *testing.T) {
 	read := "read"
 	write := "write"
-	got := PermissionsMap(&github.InstallationPermissions{
+	got, err := PermissionsMap(&github.InstallationPermissions{
 		Metadata:       &read,
 		Administration: &write,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got["metadata"] != "read" || got["administration"] != "write" {
 		t.Fatalf("unexpected map: %#v", got)
 	}
@@ -31,20 +34,20 @@ func TestListOrgInstallations_Paginates(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"total_count": 2,
 				"installations": []map[string]any{{
-					"id": 1,
+					"id":                   1,
 					"repository_selection": "selected",
-					"app_slug": "app-one",
-					"permissions": map[string]any{"metadata": "read"},
+					"app_slug":             "app-one",
+					"permissions":          map[string]any{"metadata": "read"},
 				}},
 			})
 		case "2":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"total_count": 2,
 				"installations": []map[string]any{{
-					"id": 2,
+					"id":                   2,
 					"repository_selection": "all",
-					"app_slug": "app-two",
-					"permissions": map[string]any{"administration": "write"},
+					"app_slug":             "app-two",
+					"permissions":          map[string]any{"administration": "write"},
 				}},
 			})
 		default:

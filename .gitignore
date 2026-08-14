@@ -24,3 +24,6 @@ go.work
 
 # GoReleaser output (future release-engineering pass)
 /dist
+
+# Local real-org audit notes (never commit; may contain customer permission maps)
+docs/FEEDBACK-*.md

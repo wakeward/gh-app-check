@@ -40,11 +40,15 @@ func ListOrgInstallations(ctx context.Context, client *github.Client, org string
 			if name == "" && inst.AppID != nil {
 				name = fmt.Sprintf("app-%d", inst.GetAppID())
 			}
+			perms, err := PermissionsMap(inst.Permissions)
+			if err != nil {
+				return nil, fmt.Errorf("installation %q: %w", slug, err)
+			}
 			out = append(out, OrgInstallation{
 				Slug:                slug,
 				Name:                name,
 				RepositorySelection: inst.GetRepositorySelection(),
-				Permissions:         PermissionsMap(inst.Permissions),
+				Permissions:         perms,
 			})
 		}
 		if resp == nil || resp.NextPage == 0 {

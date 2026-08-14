@@ -12,6 +12,7 @@ type JSONWriter struct{}
 
 // Write encodes results as indented JSON.
 func (JSONWriter) Write(w io.Writer, results []eval.AppAuditResult) error {
+	SortResults(results)
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(results)

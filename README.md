@@ -49,6 +49,24 @@ By default, the tool outputs a human-readable terminal table. You can modify thi
 - **Phase 3:** CI/CD integration - `--strict` exit codes, SARIF output for GitHub Advanced Security.
 - **Phase 4 (backlog, not yet scoped):** permission drift guard - track how installed apps' permissions change over time and alert on high-risk escalations, inspired by [google/capslock](https://github.com/google/capslock)'s capability-diffing approach for Go packages. See [docs/BACKLOG.md](docs/BACKLOG.md) for open questions.
 
+## Development
+
+Clone **`gh-app-graph`** and **`gh-app-check`** as sibling directories. Local builds
+use a `replace` directive in `go.mod`:
+
+```go
+replace github.com/wakeward/gh-app-graph => ../gh-app-graph
+```
+
+```bash
+go build ./...
+go vet ./...
+go test ./...
+```
+
+Product improvement backlog: [`docs/improvement-backlog.md`](docs/improvement-backlog.md).
+Local org audit notes belong in `docs/FEEDBACK-*.md` (gitignored).
+
 ## Security & Supply Chain
 
 This project takes supply chain security seriously.

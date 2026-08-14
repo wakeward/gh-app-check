@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
-	graphdata "github.com/wakeward/gh-app-graph/pkg/data"
+	"github.com/spf13/cobra"
 	"github.com/wakeward/gh-app-check/pkg/eval"
 	"github.com/wakeward/gh-app-check/pkg/ghclient"
 	"github.com/wakeward/gh-app-check/pkg/output"
 	"github.com/wakeward/gh-app-check/pkg/rules"
-	"github.com/spf13/cobra"
+	graphdata "github.com/wakeward/gh-app-graph/pkg/data"
 )
+
+var orgTimeout time.Duration
 
 var orgCmd = &cobra.Command{
 	Use:   "org <org-name>",
@@ -20,45 +23,58 @@ var orgCmd = &cobra.Command{
 GET /orgs/{org}/installations and evaluates them against the least-privilege
 rules engine (blast radius, toxic permissions).`,
 	Args: cobra.ExactArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
-		org := args[0]
+	RunE: runOrg,
+}
 
-		token, err := resolveToken()
-		if err != nil {
-			return err
-		}
-		client, err := ghclient.New(token)
-		if err != nil {
-			return fmt.Errorf("create github client: %w", err)
-		}
+func init() {
+	orgCmd.Flags().DurationVar(&orgTimeout, "timeout", 2*time.Minute, "Maximum time to wait for GitHub API responses")
+}
 
-		installations, err := ghclient.ListOrgInstallations(context.Background(), client, org)
-		if err != nil {
-			return err
-		}
-		toxic, err := graphdata.LoadToxicCombinations()
-		if err != nil {
-			return fmt.Errorf("load toxic combinations: %w", err)
-		}
+func runOrg(_ *cobra.Command, args []string) error {
+	org := args[0]
 
-		results := make([]eval.AppAuditResult, 0, len(installations))
-		for _, inst := range installations {
-			results = append(results, eval.Evaluate(
-				inst.Slug,
-				inst.Name,
-				org,
-				rules.Installation{
-					RepositorySelection: inst.RepositorySelection,
-					Permissions:         inst.Permissions,
-				},
-				toxic,
-			))
-		}
+	token, err := resolveToken()
+	if err != nil {
+		return err
+	}
+	client, err := ghclient.New(token)
+	if err != nil {
+		return fmt.Errorf("create github client: %w", err)
+	}
 
-		writer, err := output.ForFormat(format)
-		if err != nil {
-			return err
-		}
-		return writer.Write(os.Stdout, results)
-	},
+	ctx := context.Background()
+	if orgTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, orgTimeout)
+		defer cancel()
+	}
+
+	installations, err := ghclient.ListOrgInstallations(ctx, client, org)
+	if err != nil {
+		return err
+	}
+	toxic, err := graphdata.LoadToxicCombinations()
+	if err != nil {
+		return fmt.Errorf("load toxic combinations: %w", err)
+	}
+
+	results := make([]eval.AppAuditResult, 0, len(installations))
+	for _, inst := range installations {
+		results = append(results, eval.Evaluate(
+			inst.Slug,
+			inst.Name,
+			org,
+			rules.Installation{
+				RepositorySelection: inst.RepositorySelection,
+				Permissions:         inst.Permissions,
+			},
+			toxic,
+		))
+	}
+
+	writer, err := output.ForFormat(format)
+	if err != nil {
+		return err
+	}
+	return writer.Write(os.Stdout, results)
 }
