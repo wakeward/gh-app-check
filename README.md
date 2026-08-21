@@ -65,6 +65,7 @@ go test ./...
 ```
 
 Product improvement backlog: [`docs/improvement-backlog.md`](docs/improvement-backlog.md).
+Company org validation (read-only): [`docs/ORG-VALIDATION-RUNBOOK.md`](docs/ORG-VALIDATION-RUNBOOK.md).
 Local org audit notes belong in `docs/FEEDBACK-*.md` (gitignored).
 
 ## Security & Supply Chain
