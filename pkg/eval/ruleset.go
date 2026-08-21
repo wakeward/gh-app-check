@@ -5,6 +5,7 @@ import (
 
 	"github.com/wakeward/gh-app-check/pkg/rules"
 	grapheval "github.com/wakeward/gh-app-graph/pkg/eval"
+	graphplatform "github.com/wakeward/gh-app-graph/pkg/platform"
 	graphmodel "github.com/wakeward/gh-app-graph/pkg/model"
 )
 
@@ -34,6 +35,21 @@ type AppAuditResult struct {
 	Violations      []string     `json:"violations"`
 	ToxicMatches    []ToxicMatch `json:"toxic_matches"`
 	NearMisses      []NearMiss   `json:"near_misses"`
+	GHESScopes      []string     `json:"ghes_scopes,omitempty"`
+}
+
+// OrgScanResult is the full output of an organization audit including scan metadata.
+type OrgScanResult struct {
+	ScanPlatform      string           `json:"scan_platform"`
+	ScanHost            string           `json:"scan_host"`
+	ExcludedGHESRules   int              `json:"excluded_ghes_rules"`
+	Installations       []AppAuditResult `json:"installations"`
+}
+
+// ScanContext configures platform-aware evaluation.
+type ScanContext struct {
+	IncludeGHESRules bool
+	GHESOnlyKeys     map[string]struct{}
 }
 
 // namedRule pairs a rule predicate with the violation message to record and
@@ -66,6 +82,16 @@ func ControlPlaneRuleset() []namedRule {
 // Evaluate runs the control-plane ruleset and toxic-combination catalog
 // against inst and returns the aggregated AppAuditResult.
 func Evaluate(appSlug, appName, owner string, inst rules.Installation, toxic []graphmodel.ToxicCombination) AppAuditResult {
+	return EvaluateWithContext(appSlug, appName, owner, inst, toxic, ScanContext{IncludeGHESRules: true})
+}
+
+// EvaluateWithContext applies platform-aware toxic rule filtering and highlights
+// GHES-only scopes when present.
+func EvaluateWithContext(appSlug, appName, owner string, inst rules.Installation, toxic []graphmodel.ToxicCombination, scan ScanContext) AppAuditResult {
+	if !scan.IncludeGHESRules && len(scan.GHESOnlyKeys) > 0 {
+		toxic = graphplatform.FilterToxicCombinations(toxic, scan.GHESOnlyKeys, false)
+	}
+
 	result := AppAuditResult{
 		AppSlug:         appSlug,
 		AppName:         appName,
@@ -106,6 +132,13 @@ func Evaluate(appSlug, appName, owner string, inst rules.Installation, toxic []g
 				Technique:    near.Combination.Technique,
 				MissingGrant: formatMissingGrant(near.Missing[0]),
 			})
+		}
+	}
+
+	if ghesScopes := graphplatform.GrantedGHESOnly(inst.Permissions, scan.GHESOnlyKeys); len(ghesScopes) > 0 {
+		result.GHESScopes = ghesScopes
+		for _, scope := range ghesScopes {
+			result.Violations = append(result.Violations, "GHES-only scope granted: "+scope)
 		}
 	}
 

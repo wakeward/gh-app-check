@@ -49,19 +49,19 @@ func TestJSONWriterRoundTrip(t *testing.T) {
 		t.Fatalf("Write() error = %v", err)
 	}
 
-	var decoded []eval.AppAuditResult
+	var decoded eval.OrgScanResult
 	if err := json.Unmarshal(buf.Bytes(), &decoded); err != nil {
 		t.Fatalf("output is not valid JSON: %v\n%s", err, buf.String())
 	}
 
-	if len(decoded) != 1 || decoded[0].AppSlug != "test-app" || decoded[0].RiskLevel != "HIGH" {
-		t.Errorf("round-tripped result mismatch: %+v", decoded)
+	if len(decoded.Installations) != 1 || decoded.Installations[0].AppSlug != "test-app" || decoded.Installations[0].RiskLevel != "HIGH" {
+		t.Errorf("round-tripped result mismatch: %+v", decoded.Installations)
 	}
-	if decoded[0].WriteScopeCount != 2 {
-		t.Errorf("WriteScopeCount = %d, want 2", decoded[0].WriteScopeCount)
+	if decoded.Installations[0].WriteScopeCount != 2 {
+		t.Errorf("WriteScopeCount = %d, want 2", decoded.Installations[0].WriteScopeCount)
 	}
-	if decoded[0].ToxicMatches == nil || decoded[0].NearMisses == nil {
-		t.Errorf("expected empty toxic_matches and near_misses arrays, got %+v", decoded[0])
+	if decoded.Installations[0].ToxicMatches == nil || decoded.Installations[0].NearMisses == nil {
+		t.Errorf("expected empty toxic_matches and near_misses arrays, got %+v", decoded.Installations[0])
 	}
 }
 
@@ -93,6 +93,9 @@ func TestTableWriterIncludesNearMissColumn(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "NEAR_MISSES") {
 		t.Fatalf("table missing NEAR_MISSES header: %s", buf.String())
+	}
+	if !strings.Contains(buf.String(), "GHES") {
+		t.Fatalf("table missing GHES header: %s", buf.String())
 	}
 	if !strings.Contains(buf.String(), "contents:write") {
 		t.Fatalf("table missing near-miss detail: %s", buf.String())

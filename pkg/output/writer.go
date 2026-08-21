@@ -14,6 +14,20 @@ type Writer interface {
 	Write(io.Writer, []eval.AppAuditResult) error
 }
 
+// WriteOrgScan renders a full organization scan including platform metadata.
+func WriteOrgScan(w io.Writer, scan eval.OrgScanResult, format string) error {
+	switch format {
+	case "table":
+		return TableWriter{}.WriteOrgScan(w, scan)
+	case "json":
+		return JSONWriter{}.WriteOrgScan(w, scan)
+	case "markdown":
+		return MarkdownWriter{}.WriteOrgScan(w, scan)
+	default:
+		return fmt.Errorf("unknown format %q: must be table, json, or markdown", format)
+	}
+}
+
 // ForFormat returns the Writer implementation for the given --format value.
 func ForFormat(format string) (Writer, error) {
 	switch format {

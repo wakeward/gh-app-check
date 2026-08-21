@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	ghauth "github.com/cli/go-gh/v2/pkg/auth"
 	"github.com/spf13/cobra"
+	"github.com/wakeward/gh-app-check/pkg/ghclient"
 )
 
 // format holds the persistent --format flag value shared by all subcommands.
@@ -46,13 +46,11 @@ func validateFormat(_ *cobra.Command, _ []string) error {
 	}
 }
 
-// resolveToken returns a GitHub token for api.github.com, preferring an
-// explicit GH_TOKEN/GITHUB_TOKEN env var, then falling back to the gh CLI's
-// stored credentials via github.com/cli/go-gh's auth package.
+// resolveToken returns a GitHub token for the active gh auth host.
 func resolveToken() (string, error) {
-	token, _ := ghauth.TokenForHost("github.com")
-	if token == "" {
-		return "", fmt.Errorf("no GitHub token found: set GH_TOKEN/GITHUB_TOKEN or run `gh auth login`")
+	auth, err := ghclient.ResolveAuth()
+	if err != nil {
+		return "", err
 	}
-	return token, nil
+	return auth.Token, nil
 }

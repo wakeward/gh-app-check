@@ -69,6 +69,25 @@ func TestEvaluate(t *testing.T) {
 			wantWrites:    1,
 		},
 		{
+			name: "organization takeover toxic combination match",
+			inst: rules.Installation{
+				RepositorySelection: "selected",
+				Permissions:         map[string]string{"organization_administration": "write"},
+			},
+			toxic: []graphmodel.ToxicCombination{{
+				ID:          "organization-takeover-organization-administration",
+				Technique:   "Organization Takeover",
+				BlastRadius: graphmodel.BlastRadiusCritical,
+				Permissions: []graphmodel.PermissionGrant{
+					{APIKey: "organization_administration", Access: graphmodel.AccessWrite},
+				},
+			}},
+			wantRisk:      "CRITICAL",
+			wantViolCount: 1,
+			wantToxic:     1,
+			wantWrites:    1,
+		},
+		{
 			name: "combined violations, critical wins over high",
 			inst: rules.Installation{
 				RepositorySelection: "all",
@@ -144,6 +163,38 @@ func TestEvaluate(t *testing.T) {
 				t.Errorf("AppSlug/Owner not passed through: got %q/%q", result.AppSlug, result.Owner)
 			}
 		})
+	}
+}
+
+func TestEvaluateWithContext_ExcludesGHESToxicOnCloud(t *testing.T) {
+	ghesCombo := graphmodel.ToxicCombination{
+		ID:                   "server-side-remote-code-execution",
+		Technique:            "Server-Side Remote Code Execution",
+		BlastRadius:          graphmodel.BlastRadiusCritical,
+		PlatformAvailability: graphmodel.PlatformGHESOnly,
+		Permissions: []graphmodel.PermissionGrant{
+			{APIKey: "repository_pre_receive_hooks", Access: graphmodel.AccessWrite},
+			{APIKey: "contents", Access: graphmodel.AccessWrite},
+		},
+	}
+	inst := rules.Installation{
+		RepositorySelection: "selected",
+		Permissions: map[string]string{
+			"repository_pre_receive_hooks": "write",
+			"contents":                     "write",
+		},
+	}
+	scan := ScanContext{
+		IncludeGHESRules: false,
+		GHESOnlyKeys:     map[string]struct{}{"repository_pre_receive_hooks": {}},
+	}
+
+	result := EvaluateWithContext("app", "App", "org", inst, []graphmodel.ToxicCombination{ghesCombo}, scan)
+	if len(result.ToxicMatches) != 0 {
+		t.Fatalf("expected GHES toxic rule to be excluded on cloud scan, got matches %v", result.ToxicMatches)
+	}
+	if len(result.GHESScopes) != 1 {
+		t.Fatalf("expected GHES scope highlight, got %v", result.GHESScopes)
 	}
 }
 

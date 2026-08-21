@@ -12,32 +12,49 @@ import (
 	"github.com/wakeward/gh-app-check/pkg/output"
 	"github.com/wakeward/gh-app-check/pkg/rules"
 	graphdata "github.com/wakeward/gh-app-graph/pkg/data"
+	graphplatform "github.com/wakeward/gh-app-graph/pkg/platform"
 )
 
-var orgTimeout time.Duration
+var (
+	orgTimeout       time.Duration
+	orgPlatformFlag  string
+)
 
 var orgCmd = &cobra.Command{
 	Use:   "org <org-name>",
 	Short: "Audit the control plane (installed GitHub Apps) for an organization",
 	Long: `Fetches all GitHub App installations for the given organization via
 GET /orgs/{org}/installations and evaluates them against the least-privilege
-rules engine (blast radius, toxic permissions).`,
+rules engine (blast radius, toxic permissions).
+
+GHES-only permissions and toxic rules are excluded automatically on GitHub.com
+and Enterprise Cloud scans. Use --platform ghes when auditing self-hosted
+Enterprise Server, or --platform auto (default) to follow gh auth host detection.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runOrg,
 }
 
 func init() {
 	orgCmd.Flags().DurationVar(&orgTimeout, "timeout", 2*time.Minute, "Maximum time to wait for GitHub API responses")
+	orgCmd.Flags().StringVar(&orgPlatformFlag, "platform", "auto", "Scan target: auto (from gh auth), cloud (exclude GHES-only rules), or ghes")
 }
 
 func runOrg(_ *cobra.Command, args []string) error {
 	org := args[0]
 
-	token, err := resolveToken()
+	auth, err := ghclient.ResolveAuth()
 	if err != nil {
 		return err
 	}
-	client, err := ghclient.New(token)
+	scanPlatform, err := ghclient.ResolveScanPlatform(orgPlatformFlag, auth.Platform)
+	if err != nil {
+		return err
+	}
+	if scanPlatform == ghclient.ScanPlatformCloud && auth.Platform == ghclient.ScanPlatformGHES {
+		fmt.Fprintf(os.Stderr, "gh-app-check: warning: gh auth host %q is GHES but --platform cloud excludes GHES-only rules\n", auth.Host)
+	}
+
+	client, err := ghclient.NewForHost(auth.Token, auth.Host)
 	if err != nil {
 		return fmt.Errorf("create github client: %w", err)
 	}
@@ -57,10 +74,27 @@ func runOrg(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("load toxic combinations: %w", err)
 	}
+	ghesKeys, err := graphdata.LoadGHESOnlyAPIKeys()
+	if err != nil {
+		return fmt.Errorf("load GHES-only permission keys: %w", err)
+	}
+
+	includeGHES := scanPlatform.IncludesGHESRules()
+	excludedRules := 0
+	if !includeGHES {
+		filtered := graphplatform.FilterToxicCombinations(toxic, ghesKeys, false)
+		excludedRules = len(toxic) - len(filtered)
+		toxic = filtered
+	}
+
+	scanCtx := eval.ScanContext{
+		IncludeGHESRules: includeGHES,
+		GHESOnlyKeys:     ghesKeys,
+	}
 
 	results := make([]eval.AppAuditResult, 0, len(installations))
 	for _, inst := range installations {
-		results = append(results, eval.Evaluate(
+		results = append(results, eval.EvaluateWithContext(
 			inst.Slug,
 			inst.Name,
 			org,
@@ -69,12 +103,15 @@ func runOrg(_ *cobra.Command, args []string) error {
 				Permissions:         inst.Permissions,
 			},
 			toxic,
+			scanCtx,
 		))
 	}
 
-	writer, err := output.ForFormat(format)
-	if err != nil {
-		return err
+	report := eval.OrgScanResult{
+		ScanPlatform:      scanPlatform.Label(auth.Host),
+		ScanHost:          auth.Host,
+		ExcludedGHESRules: excludedRules,
+		Installations:     results,
 	}
-	return writer.Write(os.Stdout, results)
+	return output.WriteOrgScan(os.Stdout, report, format)
 }
