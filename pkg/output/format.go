@@ -8,6 +8,9 @@ import (
 )
 
 func appLabel(result eval.AppAuditResult) string {
+	if result.AppName != "" && result.AppSlug != "" && result.AppName != result.AppSlug {
+		return fmt.Sprintf("%s (%s)", result.AppName, result.AppSlug)
+	}
 	if result.AppSlug != "" {
 		return result.AppSlug
 	}

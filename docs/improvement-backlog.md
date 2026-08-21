@@ -5,7 +5,7 @@ org-specific feedback files (`docs/FEEDBACK-*.md` is gitignored).
 
 Use synthetic fixtures in tests only.
 
-## Done (2026-08-14)
+## Done (2026-08-14 through 2026-08-21)
 
 - [x] **P0** Surface `near_misses` from `gh-app-graph` in JSON/table/markdown
 - [x] **P0** All-repos + read-only grants → WARN (writes still → HIGH)
@@ -16,13 +16,18 @@ Use synthetic fixtures in tests only.
 - [x] **Docs** OAuth scope vs org role; trace sections marked Phase 2 planned
 - [x] **Hygiene** `go.mod` replace path → `../gh-app-graph`
 
+- [x] **P2** Friendly app name via `GET /apps/{slug}` (`--no-enrich-names` to skip)
+- [x] **Platform** GHES-only rule filtering and scope highlighting
+
 ## Remaining
 
-### P2 - Friendly app name
+### Phase 2 trace priorities (from ecosystem research)
 
-Installation list API exposes `app_slug` but not display name; table duplicates slug.
-
-**Shape:** Optional `GET /apps/{slug}` enrichment.
+| Item | Source pattern | Notes |
+| --- | --- | --- |
+| Detect `pull_request_target` + `create-github-app-token` + fork checkout | `credential-access-prt-fork-iatt-exfiltration` | GHSA-9g93-rxr5-xhqw |
+| Detect permissive `[bot]` actor checks in agent workflows | `execution-ai-agent-external-bot-trust` | Allow-list by App slug / installation ID |
+| Document Zizmor as complementary workflow linter | marketplace-trust-limitations.md | Not a gh-app-check dependency |
 
 ### CI / supply chain (non-blockers)
 
@@ -36,3 +41,5 @@ Installation list API exposes `app_slug` but not display name; table duplicates 
 
 - Org-specific permission maps or customer identifiers in-repo
 - Treating PASS as "safe" (Phase 1 is control-plane only)
+- User install authorization inference or likelihood scoring (see gh-app-graph `installation-gates.md`)
+- Vendor OAuth callback or platform CVE assessment in org scan output

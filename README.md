@@ -9,7 +9,7 @@ gh-app-check is a `gh` CLI extension and security auditing tool designed to eval
 
 Unlike static configuration checkers, gh-app-check bridges the gap between the **Control Plane** (what permissions an app has) and the **Execution Plane** (how the app's token is actually generated and used in Actions workflows).
 
-> **Status:** Phase 1 (`gh app-check org`) is implemented: org installation fetch, least-privilege rules, and toxic-combination checks via embedded data from [`gh-app-graph`](https://github.com/wakeward/gh-app-graph). Phase 2 (execution trace), Phase 3 (SARIF), and Phase 4 (drift guard) are not yet implemented - see [Implementation Phases](#implementation-phases) below.
+> **Status:** Phase 1 (`gh app-check org`) is implemented: org installation fetch, least-privilege rules, and toxic-combination checks via embedded data from [`gh-app-graph`](https://github.com/wakeward/gh-app-graph). Phase 1 assesses **installed App permissions only** - not user roles or install authorization paths (see [gh-app-graph installation gates](https://github.com/wakeward/gh-app-graph/blob/main/docs/installation-gates.md) for likelihood context in blog/threat-model material). Phase 2 (execution trace), Phase 3 (SARIF), and Phase 4 (drift guard) are not yet implemented - see [Implementation Phases](#implementation-phases) below.
 
 ## Documentation
 

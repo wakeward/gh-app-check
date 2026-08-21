@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	orgTimeout       time.Duration
-	orgPlatformFlag  string
+	orgTimeout          time.Duration
+	orgPlatformFlag     string
+	orgNoEnrichNames    bool
 )
 
 var orgCmd = &cobra.Command{
@@ -37,6 +38,7 @@ Enterprise Server, or --platform auto (default) to follow gh auth host detection
 func init() {
 	orgCmd.Flags().DurationVar(&orgTimeout, "timeout", 2*time.Minute, "Maximum time to wait for GitHub API responses")
 	orgCmd.Flags().StringVar(&orgPlatformFlag, "platform", "auto", "Scan target: auto (from gh auth), cloud (exclude GHES-only rules), or ghes")
+	orgCmd.Flags().BoolVar(&orgNoEnrichNames, "no-enrich-names", false, "Skip GET /apps/{slug} lookups for friendly display names")
 }
 
 func runOrg(_ *cobra.Command, args []string) error {
@@ -69,6 +71,11 @@ func runOrg(_ *cobra.Command, args []string) error {
 	installations, err := ghclient.ListOrgInstallations(ctx, client, org)
 	if err != nil {
 		return err
+	}
+	if !orgNoEnrichNames {
+		if err := ghclient.EnrichInstallationNames(ctx, client, installations); err != nil {
+			return fmt.Errorf("enrich app names: %w", err)
+		}
 	}
 	toxic, err := graphdata.LoadToxicCombinations()
 	if err != nil {
