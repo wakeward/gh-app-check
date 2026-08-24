@@ -38,18 +38,17 @@ Use synthetic fixtures in tests only.
 | Near misses on `contents:read` | Noisy for default table |
 | Table UX | Unusable wide with near misses; JSON preferred |
 
-**Hold:** pin `gh-app-graph` / drop `replace` until catalog severity on single-grant
-`contents:write` is decided (validation item 8).
+**Hold:** pin `gh-app-graph` / drop `replace` until org retest after contents:write calibration (2026-08-24).
 
 ## Remaining
 
 ### P0 - Catalog calibration (gh-app-graph)
 
-| Item | Notes |
+| Item | Status |
 | --- | --- |
-| `supply-chain-poisoning-via-releases-contents` | Downrank or require companion grant / `repository_selection=all` for Critical |
-| `organization-takeover` single-grant | Consider WARN/HIGH when only org-admin write (ruleset-only installers) |
-| Document calibration rationale | [`gh-app-graph/docs/calibration-notes.md`](https://github.com/wakeward/gh-app-graph/blob/main/docs/calibration-notes.md) |
+| `contents: write` standalone → High | Done (2026-08-24) |
+| Remove single-grant supply-chain Critical toxics | Done |
+| `organization-takeover` single-grant | Open - see calibration-notes |
 
 ### P1 - Output / UX
 
