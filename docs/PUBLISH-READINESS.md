@@ -18,7 +18,7 @@ See also [`GITHUB_SETUP_RUNBOOK.md`](GITHUB_SETUP_RUNBOOK.md) for GitHub setting
 - [ ] Pin graph in `gh-app-check` `go.mod`; drop `replace`
 - [ ] GoReleaser + signed release workflow (Cosign, SBOM, SLSA)
 - [ ] Apply branch protection + secret scanning (see setup runbook)
-- [ ] Extend CI path filters to `data/**` (graph); add `go test` to `refresh.yml`
+- [x] Extend CI path filters to `data/**` (graph); add `go test` to `refresh.yml`
 - [ ] CodeQL analysis workflow
 
 ## Phase C - History reset

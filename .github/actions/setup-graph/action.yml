@@ -1,0 +1,15 @@
+name: Setup gh-app-graph dependency
+description: Check out gh-app-graph for CI builds while go.mod uses a local replace.
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout gh-app-graph
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: wakeward/gh-app-graph
+        path: gh-app-graph
+
+    - name: Point go.mod replace at checked-out graph
+      shell: bash
+      run: go mod edit -replace=github.com/wakeward/gh-app-graph=./gh-app-graph
