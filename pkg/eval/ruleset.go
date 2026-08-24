@@ -11,9 +11,17 @@ import (
 
 // ToxicMatch records one toxic combination satisfied by an installation.
 type ToxicMatch struct {
-	ID        string `json:"id"`
-	Technique string `json:"technique"`
-	Blast     string `json:"blast_radius"`
+	ID            string            `json:"id"`
+	Technique     string            `json:"technique"`
+	Blast         string            `json:"blast_radius"`
+	ExploitPath   string            `json:"exploit_path,omitempty"`
+	MatchedGrants []PermissionGrant `json:"matched_grants,omitempty"`
+}
+
+// PermissionGrant is one matched (api_key, access) pair from a toxic combination.
+type PermissionGrant struct {
+	APIKey string `json:"api_key"`
+	Access string `json:"access"`
 }
 
 // NearMiss records a toxic combination one grant away from being satisfied.
@@ -21,6 +29,15 @@ type NearMiss struct {
 	ID           string `json:"id"`
 	Technique    string `json:"technique"`
 	MissingGrant string `json:"missing_grant"`
+	ExploitPath  string `json:"exploit_path,omitempty"`
+}
+
+// ControlPlaneFinding records a structural rule match with rationale for --explain.
+type ControlPlaneFinding struct {
+	Rule      string `json:"rule"`
+	Message   string `json:"message"`
+	Risk      string `json:"risk"`
+	Rationale string `json:"rationale,omitempty"`
 }
 
 // AppAuditResult is the outcome of evaluating one GitHub App installation
@@ -35,11 +52,13 @@ type AppAuditResult struct {
 	RepoSelection   string            `json:"repo_selection"` // "all" or "selected"
 	Permissions     map[string]string `json:"permissions,omitempty"`
 	WriteScopeCount int               `json:"write_scope_count"`
-	RiskLevel       string            `json:"risk_level"` // "CRITICAL", "HIGH", "WARN", "PASS"
-	Violations      []string          `json:"violations"`
-	ToxicMatches    []ToxicMatch      `json:"toxic_matches"`
-	NearMisses      []NearMiss        `json:"near_misses"`
-	GHESScopes      []string          `json:"ghes_scopes,omitempty"`
+	RiskLevel            string                `json:"risk_level"` // "CRITICAL", "HIGH", "WARN", "PASS"
+	Violations           []string              `json:"violations"`
+	ControlPlaneFindings []ControlPlaneFinding `json:"control_plane_findings,omitempty"`
+	ToxicMatches         []ToxicMatch          `json:"toxic_matches"`
+	NearMisses           []NearMiss            `json:"near_misses"`
+	NotableGrants        []NotableGrant        `json:"notable_grants,omitempty"`
+	GHESScopes           []string              `json:"ghes_scopes,omitempty"`
 }
 
 // OrgScanResult is the full output of an organization audit including scan metadata.
@@ -59,9 +78,11 @@ type ScanContext struct {
 // namedRule pairs a rule predicate with the violation message to record and
 // the risk level it contributes when triggered.
 type namedRule struct {
+	Rule      string
 	Predicate rules.Predicate
 	Message   string
 	Risk      string
+	Rationale string
 }
 
 // riskRank orders risk levels so the highest-severity triggered rule wins.
@@ -76,10 +97,34 @@ func RiskRank(level string) int {
 // in Design Spec §4.A.
 func ControlPlaneRuleset() []namedRule {
 	return []namedRule{
-		{rules.RepoSelectionAllWithWrite, "installation has access to all repositories", "HIGH"},
-		{rules.RepoSelectionAllReadOnly, "installation has access to all repositories (read-only grants)", "WARN"},
-		{rules.AdministrationWrite, "installation has write access to administration", "CRITICAL"},
-		{rules.ExcessiveWriteScopes, "installation has more than 5 write-level scopes (god-mode)", "HIGH"},
+		{
+			Rule:      "all-repositories-write",
+			Predicate: rules.RepoSelectionAllWithWrite,
+			Message:   "installation has access to all repositories",
+			Risk:      "HIGH",
+			Rationale: "The App can act on every repository in the organization. Any write scope combined with org-wide access maximizes blast radius.",
+		},
+		{
+			Rule:      "all-repositories-read-only",
+			Predicate: rules.RepoSelectionAllReadOnly,
+			Message:   "installation has access to all repositories (read-only grants)",
+			Risk:      "WARN",
+			Rationale: "The App can read metadata or content across every repository. This enables broad reconnaissance even without write scopes.",
+		},
+		{
+			Rule:      "administration-write",
+			Predicate: rules.AdministrationWrite,
+			Message:   "installation has write access to administration",
+			Risk:      "CRITICAL",
+			Rationale: "The App can change repository settings including branch protection rules, collaborators, and repository visibility.",
+		},
+		{
+			Rule:      "excessive-write-scopes",
+			Predicate: rules.ExcessiveWriteScopes,
+			Message:   "installation has more than 5 write-level scopes (god-mode)",
+			Risk:      "HIGH",
+			Rationale: "The App holds a large portfolio of write capabilities. Even if each scope looks justified in isolation, combined access often exceeds what a single integration needs.",
+		},
 	}
 }
 
@@ -103,14 +148,21 @@ func EvaluateWithContext(appSlug, appName, owner string, inst rules.Installation
 		RepoSelection:   inst.RepositorySelection,
 		WriteScopeCount: rules.WriteScopeCount(inst),
 		RiskLevel:       "PASS",
-		Violations:      []string{},
-		ToxicMatches:    []ToxicMatch{},
-		NearMisses:      []NearMiss{},
+		Violations:           []string{},
+		ControlPlaneFindings: []ControlPlaneFinding{},
+		ToxicMatches:         []ToxicMatch{},
+		NearMisses:           []NearMiss{},
 	}
 
 	for _, rule := range ControlPlaneRuleset() {
 		if rule.Predicate(inst) {
 			result.Violations = append(result.Violations, rule.Message)
+			result.ControlPlaneFindings = append(result.ControlPlaneFindings, ControlPlaneFinding{
+				Rule:      rule.Rule,
+				Message:   rule.Message,
+				Risk:      rule.Risk,
+				Rationale: rule.Rationale,
+			})
 			raiseRisk(&result, rule.Risk)
 		}
 	}
@@ -118,10 +170,19 @@ func EvaluateWithContext(appSlug, appName, owner string, inst rules.Installation
 	if len(toxic) > 0 {
 		toxicResult := grapheval.Evaluate(graphmodel.AppPermissionSet{Permissions: inst.Permissions}, toxic)
 		for _, match := range toxicResult.Matches {
+			grants := make([]PermissionGrant, 0, len(match.Combination.Permissions))
+			for _, grant := range match.Combination.Permissions {
+				grants = append(grants, PermissionGrant{
+					APIKey: grant.APIKey,
+					Access: string(grant.Access),
+				})
+			}
 			result.ToxicMatches = append(result.ToxicMatches, ToxicMatch{
-				ID:        match.Combination.ID,
-				Technique: match.Combination.Technique,
-				Blast:     string(match.Combination.BlastRadius),
+				ID:            match.Combination.ID,
+				Technique:     match.Combination.Technique,
+				Blast:         string(match.Combination.BlastRadius),
+				ExploitPath:   match.Combination.ExploitPath,
+				MatchedGrants: grants,
 			})
 			msg := fmt.Sprintf(
 				"toxic combination: %s (%s)",
@@ -138,6 +199,7 @@ func EvaluateWithContext(appSlug, appName, owner string, inst rules.Installation
 				ID:           near.Combination.ID,
 				Technique:    near.Combination.Technique,
 				MissingGrant: formatMissingGrant(near.Missing[0]),
+				ExploitPath:  near.Combination.ExploitPath,
 			})
 		}
 	}

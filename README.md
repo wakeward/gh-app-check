@@ -23,6 +23,8 @@ Audit all applications installed in your organization to identify blast radius i
 
 ```bash
 gh app-check org my-organization
+gh app-check org my-organization --explain --no-near-misses
+gh app-check org my-organization --explain-all --format json
 ```
 
 ### 2. Execution Plane Trace
@@ -38,8 +40,10 @@ gh app-check trace my-internal-deployer-app --org my-organization
 By default, the tool outputs a human-readable terminal table. You can modify this for automation pipelines:
 
 - `--format table` (default)
-- `--format json`: structured JSON output for piping to `jq` or external SIEMs.
+- `--format json`: structured JSON output for piping to `jq` or external SIEMs. Includes `exploit_path`, `matched_grants`, and `control_plane_findings` on each installation.
 - `--format markdown`: Markdown tables for automated PR comments or Issues.
+- `--explain`: human-readable narrative for **CRITICAL/HIGH** findings (why each toxic combo and structural rule fired).
+- `--explain-all`: with `--explain`, also include PASS/WARN installations and standalone permission notes from the catalog.
 
 ## Implementation Phases
 

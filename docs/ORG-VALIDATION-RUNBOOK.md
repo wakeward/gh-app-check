@@ -80,6 +80,16 @@ gh app-check org ORG --platform auto
 
 Compare: excluded_ghes_rules count, any ghes_scopes highlights on cloud vs ghes.
 
+### E2. Explain output (engineer rationale)
+
+gh app-check org ORG --explain --no-near-misses
+# CRITICAL/HIGH only: toxic matched grants, exploit_path, structural rule rationales
+
+gh app-check org ORG --explain --explain-all
+# Include PASS/WARN and standalone catalog notes (e.g. contents: write = High)
+
+gh app-check org ORG --format json --no-near-misses | jq '.installations[] | select(.risk_level != "PASS") | {slug: .app_slug, risk: .risk_level, toxics: [.toxic_matches[] | {id, exploit_path, matched_grants}], structural: .control_plane_findings}'
+
 ### E. Friendly names (P2)
 
 gh app-check org ORG
@@ -144,6 +154,7 @@ A short FEEDBACK doc with sections:
 | A | Build + unit tests | `go test ./...` | None | No |
 | B | Default org audit | `gh app-check org ORG` | Read installations + app metadata | No |
 | C | JSON / markdown output | `--format json`, `--format markdown` | Same as B | No |
+| C2 | Explain rationale | `--explain`, `--explain-all` | Same as B (+ catalog load) | No |
 | D | GHES rule filtering | `--platform auto` vs `cloud` vs `ghes` | Same as B | No |
 | E | App name enrichment | default vs `--no-enrich-names` | Extra GET /apps/{slug} per install | No |
 | F | Timeout | `--timeout 30s` | Same as B | No |

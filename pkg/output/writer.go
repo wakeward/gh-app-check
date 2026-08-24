@@ -15,7 +15,10 @@ type Writer interface {
 }
 
 // WriteOrgScan renders a full organization scan including platform metadata.
-func WriteOrgScan(w io.Writer, scan eval.OrgScanResult, format string) error {
+func WriteOrgScan(w io.Writer, scan eval.OrgScanResult, format string, opts Options) error {
+	if opts.Explain && (format == "table" || format == "markdown") {
+		return ExplainWriter{ExplainAll: opts.ExplainAll}.WriteOrgScan(w, scan)
+	}
 	switch format {
 	case "table":
 		return TableWriter{}.WriteOrgScan(w, scan)

@@ -23,6 +23,7 @@ Use synthetic fixtures in tests only.
 - [x] **Output** `--no-near-misses`; dedupe near-miss display; toxic technique `[id]` when duplicated
 - [x] **Docs** Local `go build -o gh-app-check .`; 404 vs org role vs `admin:org` false lead
 - [x] **UX** Warn when `--platform ghes` used against github.com
+- [x] **Explain** `--explain` / `--explain-all`; JSON includes exploit_path and matched_grants
 
 ## Validation summary (2026-08-24, sanitized)
 

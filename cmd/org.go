@@ -12,14 +12,17 @@ import (
 	"github.com/wakeward/gh-app-check/pkg/output"
 	"github.com/wakeward/gh-app-check/pkg/rules"
 	graphdata "github.com/wakeward/gh-app-graph/pkg/data"
+	graphmodel "github.com/wakeward/gh-app-graph/pkg/model"
 	graphplatform "github.com/wakeward/gh-app-graph/pkg/platform"
 )
 
 var (
-	orgTimeout        time.Duration
-	orgPlatformFlag   string
-	orgNoEnrichNames  bool
-	orgNoNearMisses   bool
+	orgTimeout       time.Duration
+	orgPlatformFlag  string
+	orgNoEnrichNames bool
+	orgNoNearMisses  bool
+	orgExplain       bool
+	orgExplainAll    bool
 )
 
 var orgCmd = &cobra.Command{
@@ -41,6 +44,8 @@ func init() {
 	orgCmd.Flags().StringVar(&orgPlatformFlag, "platform", "auto", "Scan target: auto (from gh auth), cloud (exclude GHES-only rules), or ghes")
 	orgCmd.Flags().BoolVar(&orgNoEnrichNames, "no-enrich-names", false, "Skip GET /apps/{slug} lookups for friendly display names")
 	orgCmd.Flags().BoolVar(&orgNoNearMisses, "no-near-misses", false, "Omit near-miss toxic combinations from output")
+	orgCmd.Flags().BoolVar(&orgExplain, "explain", false, "Show why each finding applies (human-readable narrative)")
+	orgCmd.Flags().BoolVar(&orgExplainAll, "explain-all", false, "With --explain, include PASS/WARN installations and standalone permission notes")
 }
 
 func runOrg(_ *cobra.Command, args []string) error {
@@ -90,6 +95,13 @@ func runOrg(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("load GHES-only permission keys: %w", err)
 	}
+	var permissionCatalog []graphmodel.Permission
+	if orgExplain || orgExplainAll {
+		permissionCatalog, err = graphdata.LoadResolvedPermissions()
+		if err != nil {
+			return fmt.Errorf("load permission catalog: %w", err)
+		}
+	}
 
 	includeGHES := scanPlatform.IncludesGHESRules()
 	excludedRules := 0
@@ -124,6 +136,16 @@ func runOrg(_ *cobra.Command, args []string) error {
 		if orgNoNearMisses {
 			result.NearMisses = nil
 		}
+		if orgExplainAll || (orgExplain && (result.RiskLevel == "PASS" || result.RiskLevel == "WARN")) {
+			result.NotableGrants = eval.NotableGrants(
+				rules.Installation{
+					RepositorySelection: inst.RepositorySelection,
+					Permissions:         inst.Permissions,
+				},
+				permissionCatalog,
+				graphmodel.SeverityHigh,
+			)
+		}
 		results = append(results, result)
 	}
 
@@ -133,5 +155,8 @@ func runOrg(_ *cobra.Command, args []string) error {
 		ExcludedGHESRules: excludedRules,
 		Installations:     results,
 	}
-	return output.WriteOrgScan(os.Stdout, report, format)
+	return output.WriteOrgScan(os.Stdout, report, format, output.Options{
+		Explain:    orgExplain,
+		ExplainAll: orgExplainAll,
+	})
 }
