@@ -73,7 +73,7 @@ func writeExplainInstallation(w io.Writer, result eval.AppAuditResult) {
 			}
 			if match.ExploitPath != "" {
 				fmt.Fprintln(w, "    What this enables:")
-				writeWrapped(w, "      ", match.ExploitPath)
+				writeWrapped(w, "      ", "", match.ExploitPath)
 			}
 		}
 	}
@@ -84,7 +84,7 @@ func writeExplainInstallation(w io.Writer, result eval.AppAuditResult) {
 		for _, finding := range result.ControlPlaneFindings {
 			fmt.Fprintf(w, "  [%s] %s\n", finding.Risk, finding.Message)
 			if finding.Rationale != "" {
-				writeWrapped(w, "    ", finding.Rationale)
+				writeWrapped(w, "    ", "", finding.Rationale)
 			}
 		}
 	}
@@ -101,18 +101,22 @@ func writeExplainInstallation(w io.Writer, result eval.AppAuditResult) {
 			seen[key] = struct{}{}
 			fmt.Fprintf(w, "  • %s — missing %s\n", near.Technique, near.MissingGrant)
 			if near.ExploitPath != "" {
-				writeWrapped(w, "    Would enable: ", near.ExploitPath)
+				writeWrapped(w, "    ", "Would enable: ", near.ExploitPath)
 			}
 		}
 	}
 
 	if len(result.NotableGrants) > 0 {
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Notable standalone permissions (catalog severity; no toxic combo matched):")
+		header := "Notable standalone permissions (catalog severity):"
+		if len(result.ToxicMatches) == 0 {
+			header = "Notable standalone permissions (catalog severity; no toxic combo matched):"
+		}
+		fmt.Fprintln(w, header)
 		for _, grant := range result.NotableGrants {
 			fmt.Fprintf(w, "  [%s] %s: %s\n", grant.Severity, grant.APIKey, grant.Access)
 			if grant.SecurityNotes != "" {
-				writeWrapped(w, "    ", grant.SecurityNotes)
+				writeWrapped(w, "    ", "", grant.SecurityNotes)
 			}
 		}
 	}
@@ -128,18 +132,24 @@ func writeExplainInstallation(w io.Writer, result eval.AppAuditResult) {
 	}
 }
 
-func writeWrapped(w io.Writer, prefix, text string) {
+func writeWrapped(w io.Writer, indent, label, text string) {
 	text = strings.Join(strings.Fields(text), " ")
 	const width = 88
-	line := prefix
+	firstPrefix := indent + label
+	contPrefix := indent + strings.Repeat(" ", len(label))
+	line := firstPrefix
 	for _, word := range strings.Fields(text) {
-		if len(line)+len(word)+1 > width && line != prefix {
+		add := word
+		if line != firstPrefix {
+			add = " " + word
+		}
+		if len(line)+len(add) > width && line != firstPrefix {
 			fmt.Fprintln(w, line)
-			line = prefix + word
-		} else if line == prefix {
+			line = contPrefix + word
+		} else if line == firstPrefix {
 			line += word
 		} else {
-			line += " " + word
+			line += add
 		}
 	}
 	if line != "" {

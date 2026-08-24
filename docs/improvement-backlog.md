@@ -27,6 +27,8 @@ Use synthetic fixtures in tests only.
 
 ## Validation summary (2026-08-24, sanitized)
 
+### First run (pre-calibration)
+
 | Area | Result |
 | --- | --- |
 | Core scan (admin org) | PASS - mapping REST → scan correct on spot checks |
@@ -39,7 +41,18 @@ Use synthetic fixtures in tests only.
 | Near misses on `contents:read` | Noisy for default table |
 | Table UX | Unusable wide with near misses; JSON preferred |
 
-**Hold:** pin `gh-app-graph` / drop `replace` until org retest after contents:write calibration (2026-08-24).
+### Retest (post-calibration + --explain)
+
+| Area | Result |
+| --- | --- |
+| PR bots (`contents:write` only) | **PASS** - was false CRITICAL, now PASS |
+| Org-wide CI App | **PASS** - CRITICAL with multi-grant toxics + structural |
+| IT/runner App | **PASS** - CRITICAL via admin write + runners toxic |
+| `--explain` / JSON fields | **PASS** - matched grants, exploit_path, structural rationales |
+| Performance (16 installs) | **PASS** - ~4s |
+| Risk mix | CRITICAL 8→6, PASS 5→7 |
+
+**Verdict:** contents:write calibration validated. Pin v0.1.0 reasonable if org-admin single-grant Critical accepted. Drop `replace` only from a real git checkout with tagged graph.
 
 ## Remaining
 
@@ -55,6 +68,10 @@ Use synthetic fixtures in tests only.
 
 | Item | Notes |
 | --- | --- |
+| Notable read row when write granted | Done (2026-08-24 retest) |
+| Near-miss wrap repeats `Would enable:` | Done (2026-08-24 retest) |
+| Notable header on CRITICAL with `--explain-all` | Done - header no longer claims "no toxic combo matched" |
+| `notable_grants` in default JSON | Open - only populated with `--explain`/`--explain-all`; document or change |
 | Table default without near misses | Consider default `--no-near-misses` for table format only |
 | Enrichment visibility | Log or count private App name lookup 404s (stderr summary) |
 | Selected-repo repo list | Needs installation token or higher privilege API (product gap) |
@@ -71,8 +88,8 @@ Use synthetic fixtures in tests only.
 
 | Item | Notes |
 | --- | --- |
-| Tag `gh-app-graph` v0.1.0 | After catalog calibration |
-| Drop `go.mod` replace | Pin tagged graph version |
+| Tag `gh-app-graph` v0.1.0 | After catalog calibration + org retest PASS |
+| Drop `go.mod` replace | Pin tagged graph; needs real git checkout with remotes |
 | Optional org squash to v0.1.0 | After calibration + retest |
 
 ### CI / supply chain (non-blockers)

@@ -77,3 +77,13 @@ func TestExplainWriter_SkipsPassUnlessExplainAll(t *testing.T) {
 		t.Fatal("expected PASS app with --explain-all")
 	}
 }
+
+func TestWriteWrapped_NearMissContinuationDoesNotRepeatLabel(t *testing.T) {
+	var buf strings.Builder
+	long := strings.Repeat("word ", 30)
+	writeWrapped(&buf, "    ", "Would enable: ", long)
+	out := buf.String()
+	if strings.Count(out, "Would enable:") != 1 {
+		t.Fatalf("label repeated in wrapped near-miss text:\n%s", out)
+	}
+}

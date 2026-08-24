@@ -41,6 +41,10 @@ func NotableGrants(inst rules.Installation, catalog []graphmodel.Permission, min
 			if !accessSatisfies(granted, level.Access) {
 				continue
 			}
+			// Write implies read in the catalog; surface the write row only.
+			if level.Access == graphmodel.AccessRead && granted == string(graphmodel.AccessWrite) {
+				continue
+			}
 			if severityRank[level.Severity] < minRank {
 				continue
 			}

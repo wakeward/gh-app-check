@@ -32,6 +32,24 @@ func TestNotableGrants_IncludesHighWriteGrants(t *testing.T) {
 	}
 }
 
+func TestNotableGrants_OmitsReadWhenWriteGranted(t *testing.T) {
+	catalog := []graphmodel.Permission{{
+		APIKey: "contents",
+		AccessLevels: []graphmodel.AccessLevelDetail{
+			{Access: graphmodel.AccessRead, Severity: graphmodel.SeverityHigh, SecurityNotes: "read note"},
+			{Access: graphmodel.AccessWrite, Severity: graphmodel.SeverityHigh, SecurityNotes: "write note"},
+		},
+	}}
+
+	got := NotableGrants(rules.Installation{
+		Permissions: map[string]string{"contents": "write"},
+	}, catalog, graphmodel.SeverityHigh)
+
+	if len(got) != 1 || got[0].Access != "write" {
+		t.Fatalf("expected write-only notable, got %+v", got)
+	}
+}
+
 func TestEvaluateWithContext_IncludesExploitPath(t *testing.T) {
 	combo := graphmodel.ToxicCombination{
 		ID:          "arbitrary-code-execution",
