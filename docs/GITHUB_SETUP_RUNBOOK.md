@@ -1,39 +1,83 @@
-# GitHub setup runbook (not yet executed)
+# GitHub repository setup runbook
 
-This is a runbook, not a script that has been run. Nothing here has been executed against GitHub. Review each step, then run them yourself (or ask me to run a specific step once you've confirmed it).
+Configure GitHub settings before the first public push. Apply to **both**
+`wakeward/gh-app-check` and `wakeward/gh-app-graph` unless noted.
 
-## Prerequisite: re-authenticate `gh`
-
-The local `gh` CLI token is currently invalid (checked during this session: `gh auth status` reported "The token in default is invalid"). Re-authenticate before anything else:
+## Prerequisite: authenticate `gh`
 
 ```bash
 gh auth login -h github.com
+gh auth status
 ```
 
-## Step 1: Create the GitHub repository (no push yet)
+You need admin access on each repository to configure branch protection.
+
+---
+
+## Branch protection (solo maintainer)
+
+Apply **after at least one successful workflow run** on `main` (or a PR) so
+GitHub knows the required status check names.
+
+### Settings to enable (GitHub UI)
+
+Repository → **Settings** → **Branches** → **Add branch protection rule**
+(or **Rules** → ruleset) for `main`:
+
+| Setting | Value | Why |
+|---|---|---|
+| Require a pull request before merging | **On** | No direct pushes to `main` |
+| Required approvals | **0** | Solo maintainer: PR gate + CI, merge without a second human. Setting `1` blocks you unless you use a bot/second account. |
+| Dismiss stale pull request approvals | **On** | Scorecard branch-protection tier |
+| Require review from Code Owners | **On** | Requires `.github/CODEOWNERS` (both repos) |
+| Require status checks to pass | **On** | Blocking CI |
+| Require branches to be up to date | **On** (`strict: true`) | Scorecard tier 3 |
+| Status checks (exact job names) | See below | Must match workflow `jobs.*.name` |
+| Require conversation resolution | **On** | Low-cost hygiene |
+| Require linear history | **On** | Prevents merge commits on `main` |
+| Do not allow bypassing | **On** / enforce admins | Includes admins |
+| Allow force pushes | **Off** | Scorecard tier 1 |
+| Allow deletions | **Off** | Scorecard tier 1 |
+
+### Required status check names
+
+These are the **job** `name:` fields (not the workflow file title):
+
+| Check name | Workflow file |
+|---|---|
+| `golangci-lint` | `.github/workflows/lint_tests.yml` |
+| `Go Build, Vet & Unit Tests` | `.github/workflows/unit_tests.yml` |
+| `govulncheck & gosec` | `.github/workflows/security_scan.yml` |
+
+Optional: add `Scorecard analysis` once Scorecard has run once (informational;
+not required for merge unless you want it blocking).
+
+**gh-app-graph only:** `refresh.yml` runs on schedule; do not require it for
+every PR (it only runs weekly / manual dispatch).
+
+### Solo maintainer workflow
+
+1. Create a branch: `git checkout -b feat/my-change`
+2. Push and open a PR to `main`
+3. Wait for the three required checks to pass
+4. Merge the PR (no second reviewer needed with approvals = 0)
+
+Scorecard's separate **Code-Review** check will still score low on a solo
+project. That is expected; do not fake reviews with a second account.
+
+### Expected Scorecard branch-protection score
+
+With the settings above: roughly **5-6/10** (tier 3: status checks + no force
+push). **9/10** requires two human reviewers, which is not practical solo.
+
+### API equivalent (gh-app-check example)
+
+Run once checks exist on GitHub:
 
 ```bash
-cd /home/wakeward/src/gh-app-check
+REPO=wakeward/gh-app-check   # or wakeward/gh-app-graph
 
-gh repo create wakeward/gh-app-check \
-  --public \
-  --source=. \
-  --remote=origin \
-  --description "GitHub CLI extension to audit GitHub App installations for least-privilege violations"
-```
-
-This creates the empty remote repository and wires up `origin` locally. It does **not** push any commits (no `--push` flag). Verify afterward with:
-
-```bash
-git remote -v
-```
-
-## Step 2: Configure branch protection on `main`
-
-Solo-maintainer-tuned: PR required with **0** required approvals (you merge your own PRs once checks pass - GitHub blocks self-approval regardless of this number, so `1` would just lock you out), everything else Scorecard's `Branch-Protection` check rewards enabled, admins included in enforcement (no bypass list).
-
-```bash
-cat <<'EOF' | gh api --method PUT repos/wakeward/gh-app-check/branches/main/protection --input -
+cat <<'EOF' | gh api --method PUT "repos/${REPO}/branches/main/protection" --input -
 {
   "required_status_checks": {
     "strict": true,
@@ -46,7 +90,8 @@ cat <<'EOF' | gh api --method PUT repos/wakeward/gh-app-check/branches/main/prot
   "enforce_admins": true,
   "required_pull_request_reviews": {
     "required_approving_review_count": 0,
-    "dismiss_stale_reviews": true
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": true
   },
   "restrictions": null,
   "required_linear_history": true,
@@ -57,49 +102,57 @@ cat <<'EOF' | gh api --method PUT repos/wakeward/gh-app-check/branches/main/prot
 EOF
 ```
 
-Notes:
-- The three `contexts` entries must match the job `name:` fields exactly as GitHub reports them after the first workflow run on `main` or on a PR - the API call may need the contexts added/corrected once you've seen the actual check names appear (they won't exist as valid contexts until the workflows have run at least once). It's fine to run this command with an empty `contexts: []` first, push, let the workflows run once, then re-run this command with the real context names.
-- `required_conversation_resolution: true` is a low-cost addition beyond the original plan (mirrors gh-branch-auditor's `GH-BP-007` control) - remove if you don't want it.
-- The separate `Code-Review` Scorecard check will score low/zero as a genuinely solo project. Not addressed here - not something to fake with a second account.
+If the API rejects unknown context names, push once, let workflows run, then
+re-run with the exact names shown under the PR **Checks** tab.
 
-## Step 3: Repo-level security settings
+---
+
+## Repo-level security settings
 
 ```bash
-gh api --method PATCH repos/wakeward/gh-app-check \
+REPO=wakeward/gh-app-check   # repeat for gh-app-graph
+
+gh api --method PATCH "repos/${REPO}" \
   -F security_and_analysis[secret_scanning][status]=enabled \
   -F security_and_analysis[secret_scanning_push_protection][status]=enabled \
   -F security_and_analysis[dependabot_security_updates][status]=enabled
 ```
 
-CodeQL default setup (separate endpoint; Go is a supported CodeQL language):
+CodeQL default setup (Go):
 
 ```bash
-gh api --method PUT repos/wakeward/gh-app-check/code-scanning/default-setup \
+gh api --method PUT "repos/${REPO}/code-scanning/default-setup" \
   -f state=configured \
   -f query_suite=default \
   -f 'languages[]=go'
 ```
 
-Secret scanning itself is typically already on by default for new public repos - the command above is a belt-and-braces confirmation, and explicitly turns on push protection and Dependabot security updates, which are not on by default.
+---
 
-## Step 4: Push, only after Steps 1-3 are confirmed in place
+## Order of operations
 
-```bash
-git push -u origin main
-```
+1. Ensure workflows exist on `main` (at least one green run)
+2. Apply branch protection with real check names
+3. Enable secret scanning + push protection + Dependabot security updates
+4. Enable CodeQL default setup
+5. Continue Phase B (releases) before flipping public
 
-Then go back and re-run the Step 2 command with the real check-run context names once the workflows have executed at least once (see note above).
+---
 
-## Step 5 (separate follow-up pass, not now)
+## Verify OpenSSF Scorecard
 
-Release engineering - `.goreleaser.yaml`, `.github/workflows/release.yml`, Cosign signing, syft SBOM, SLSA L3 provenance - adapted from your existing [gh-branch-auditor](https://github.com/wakeward/gh-branch-auditor) templates. Not required for a strong pre-release Scorecard score; do this deliberately once you're ready to cut `v0.1.0`, not squeezed into this bootstrap pass.
-
-## Verifying the OpenSSF Scorecard result
-
-Once pushed and the `scorecard.yml` workflow has run at least once on `main`:
+After `scorecard.yml` runs on `main`:
 
 ```bash
-gh api repos/wakeward/gh-app-check/actions/workflows | jq '.workflows[] | select(.name=="Scorecard supply-chain security")'
+gh api "repos/wakeward/gh-app-check/actions/workflows" \
+  | jq '.workflows[] | select(.name=="Scorecard supply-chain security")'
 ```
 
-Or check the badge directly (may take a few minutes to populate after first run): `https://securityscorecards.dev/viewer/?uri=github.com/wakeward/gh-app-check`
+Badge: `https://securityscorecards.dev/viewer/?uri=github.com/wakeward/gh-app-check`
+
+---
+
+## Release engineering (Phase B - not part of branch protection)
+
+Signed releases (Cosign), SBOM (syft), and SLSA provenance are Phase B.
+See [`PUBLISH-READINESS.md`](PUBLISH-READINESS.md).

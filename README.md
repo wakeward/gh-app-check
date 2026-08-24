@@ -27,11 +27,14 @@ gh app-check org my-organization --explain --no-near-misses
 gh app-check org my-organization --explain-all --format json
 ```
 
-### 2. Execution Plane Trace
+### 2. Execution Plane Trace (Phase 2 - not yet implemented)
 
-Trace exactly how a specific internal app is being used across your codebase. This checks your `.github/workflows` to ensure tokens are being scoped correctly.
+> **Not available yet.** `gh app-check trace` returns an error today. Phase 2 will
+> add Code Search and workflow YAML analysis. Use Phase 1 (`org`) for control-plane
+> auditing now.
 
 ```bash
+# Planned - do not rely on this until Phase 2 ships
 gh app-check trace my-internal-deployer-app --org my-organization
 ```
 
@@ -40,7 +43,7 @@ gh app-check trace my-internal-deployer-app --org my-organization
 By default, the tool outputs a human-readable terminal table. You can modify this for automation pipelines:
 
 - `--format table` (default)
-- `--format json`: structured JSON output for piping to `jq` or external SIEMs. Includes `exploit_path`, `matched_grants`, and `control_plane_findings` on each installation.
+- `--format json`: structured JSON output for piping to `jq` or external SIEMs. Includes `exploit_path`, `matched_grants`, and `control_plane_findings` on each installation. Field `notable_grants` is populated only when `--explain` or `--explain-all` is used (or with `--explain-all` in JSON-only runs).
 - `--format markdown`: Markdown tables for automated PR comments or Issues.
 - `--explain`: human-readable narrative for **CRITICAL/HIGH** findings (why each toxic combo and structural rule fired).
 - `--explain-all`: with `--explain`, also include PASS/WARN installations and standalone permission notes from the catalog.
@@ -49,8 +52,8 @@ By default, the tool outputs a human-readable terminal table. You can modify thi
 
 - **Phase 0:** secure foundation - LICENSE, SECURITY.md, branch protection, Dependabot, gosec/govulncheck as blocking CI checks, OpenSSF Scorecard workflow, command skeleton.
 - **Phase 1 (implemented):** Control Plane auditor - `GET /orgs/{org}/installations` fetching, pagination, rules engine (blast radius, toxic permissions from `gh-app-graph`).
-- **Phase 2:** Execution Plane tracer - Code Search API integration, YAML AST parsing of Actions workflows, `.pem`/hardcoded-key detection.
-- **Phase 3:** CI/CD integration - `--strict` exit codes, SARIF output for GitHub Advanced Security.
+- **Phase 2 (planned):** Execution Plane tracer - Code Search API integration, YAML AST parsing of Actions workflows, `.pem`/hardcoded-key detection.
+- **Phase 3 (planned):** CI/CD integration - `--strict` exit codes, SARIF output for GitHub Advanced Security.
 - **Phase 4 (backlog, not yet scoped):** permission drift guard - track how installed apps' permissions change over time and alert on high-risk escalations, inspired by [google/capslock](https://github.com/google/capslock)'s capability-diffing approach for Go packages. See [docs/BACKLOG.md](docs/BACKLOG.md) for open questions.
 
 ## Development
@@ -69,7 +72,8 @@ go test ./...
 ```
 
 Product improvement backlog: [`docs/improvement-backlog.md`](docs/improvement-backlog.md).
-Company org validation (read-only): [`docs/ORG-VALIDATION-RUNBOOK.md`](docs/ORG-VALIDATION-RUNBOOK.md).
+Publish checklist: [`docs/PUBLISH-READINESS.md`](docs/PUBLISH-READINESS.md).
+Maintainer org validation template (read-only): [`docs/ORG-VALIDATION-RUNBOOK.md`](docs/ORG-VALIDATION-RUNBOOK.md).
 Local org audit notes belong in `docs/FEEDBACK-*.md` (gitignored).
 
 ## Security & Supply Chain
@@ -82,3 +86,4 @@ This project takes supply chain security seriously.
 - Future releases will be signed keylessly using **Sigstore/Cosign**, include an SPDX Software Bill of Materials (SBOM), and generate **SLSA Level 3** provenance attestations.
 
 Please refer to [SECURITY.md](SECURITY.md) for vulnerability reporting guidelines.
+Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).

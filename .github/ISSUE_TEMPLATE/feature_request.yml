@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest a new flag, output format, or Phase 2+ capability
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to audit or automate?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Suggested phase
+      options:
+        - Phase 1 (org installation audit)
+        - Phase 2 (execution trace)
+        - Phase 3 (SARIF / CI strict mode)
+        - Phase 4 (drift guard)
+        - Unsure

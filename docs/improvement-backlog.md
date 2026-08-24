@@ -18,7 +18,7 @@ Use synthetic fixtures in tests only.
 - [x] **P2** Friendly app name via `GET /apps/{slug}` (`--no-enrich-names` to skip)
 - [x] **Platform** GHES-only rule filtering and scope highlighting
 - [x] **Validation runbook** [`ORG-VALIDATION-RUNBOOK.md`](ORG-VALIDATION-RUNBOOK.md)
-- [x] **2026-08-24 validation** First company org read-only run (16 installs, cloud)
+- [x] **Field validation** Real-org read-only Phase 1 run (sanitized; cloud)
 - [x] **JSON** Emit `installation_id`, `app_id`, `permissions`, `html_url` per install
 - [x] **Output** `--no-near-misses`; dedupe near-miss display; toxic technique `[id]` when duplicated
 - [x] **Docs** Local `go build -o gh-app-check .`; 404 vs org role vs `admin:org` false lead
@@ -49,8 +49,8 @@ Use synthetic fixtures in tests only.
 | Org-wide CI App | **PASS** - CRITICAL with multi-grant toxics + structural |
 | IT/runner App | **PASS** - CRITICAL via admin write + runners toxic |
 | `--explain` / JSON fields | **PASS** - matched grants, exploit_path, structural rationales |
-| Performance (16 installs) | **PASS** - ~4s |
-| Risk mix | CRITICAL 8→6, PASS 5→7 |
+| Performance | **PASS** - small org completes in seconds |
+| Risk mix | CRITICAL count dropped after contents:write calibration |
 
 **Verdict:** contents:write calibration validated. Pin v0.1.0 reasonable if org-admin single-grant Critical accepted. Drop `replace` only from a real git checkout with tagged graph.
 

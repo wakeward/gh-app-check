@@ -1,0 +1,46 @@
+name: Bug report
+description: Report incorrect scan output, CLI failure, or docs bug
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do **not** paste live org installation JSON containing customer identifiers
+        unless you redact slugs and permission maps. Prefer synthetic examples.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Expected vs actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: gh-app-check version or commit
+      placeholder: v0.1.0 or git SHA
+
+  - type: input
+    id: gh-version
+    attributes:
+      label: gh CLI version
+      placeholder: gh version 2.x
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - GitHub.com (GHEC)
+        - GitHub Enterprise Server
+        - Unknown
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Command line and flags (redact org name if needed)
+    validations:
+      required: true

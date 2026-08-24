@@ -1,4 +1,8 @@
-# Company org validation runbook (Phase 1)
+# Maintainer org validation runbook (Phase 1)
+
+> **Maintainer template only.** For validating `gh-app-check` against a real
+> organization during development. Not required for end users. Do not commit
+> org-specific findings to git (`docs/FEEDBACK-*.md` is gitignored).
 
 **Purpose:** Safe, read-only validation of `gh-app-check` against a real organization.
 Copy this file (or the Cursor prompt section below) when running from a company
