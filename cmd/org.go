@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	orgTimeout          time.Duration
-	orgPlatformFlag     string
-	orgNoEnrichNames    bool
+	orgTimeout        time.Duration
+	orgPlatformFlag   string
+	orgNoEnrichNames  bool
+	orgNoNearMisses   bool
 )
 
 var orgCmd = &cobra.Command{
@@ -39,6 +40,7 @@ func init() {
 	orgCmd.Flags().DurationVar(&orgTimeout, "timeout", 2*time.Minute, "Maximum time to wait for GitHub API responses")
 	orgCmd.Flags().StringVar(&orgPlatformFlag, "platform", "auto", "Scan target: auto (from gh auth), cloud (exclude GHES-only rules), or ghes")
 	orgCmd.Flags().BoolVar(&orgNoEnrichNames, "no-enrich-names", false, "Skip GET /apps/{slug} lookups for friendly display names")
+	orgCmd.Flags().BoolVar(&orgNoNearMisses, "no-near-misses", false, "Omit near-miss toxic combinations from output")
 }
 
 func runOrg(_ *cobra.Command, args []string) error {
@@ -54,6 +56,9 @@ func runOrg(_ *cobra.Command, args []string) error {
 	}
 	if scanPlatform == ghclient.ScanPlatformCloud && auth.Platform == ghclient.ScanPlatformGHES {
 		fmt.Fprintf(os.Stderr, "gh-app-check: warning: gh auth host %q is GHES but --platform cloud excludes GHES-only rules\n", auth.Host)
+	}
+	if scanPlatform == ghclient.ScanPlatformGHES && auth.Platform == ghclient.ScanPlatformCloud {
+		fmt.Fprintf(os.Stderr, "gh-app-check: warning: gh auth host %q is GitHub.com but --platform ghes includes GHES-only rules (none may apply)\n", auth.Host)
 	}
 
 	client, err := ghclient.NewForHost(auth.Token, auth.Host)
@@ -101,7 +106,7 @@ func runOrg(_ *cobra.Command, args []string) error {
 
 	results := make([]eval.AppAuditResult, 0, len(installations))
 	for _, inst := range installations {
-		results = append(results, eval.EvaluateWithContext(
+		result := eval.EvaluateWithContext(
 			inst.Slug,
 			inst.Name,
 			org,
@@ -111,7 +116,15 @@ func runOrg(_ *cobra.Command, args []string) error {
 			},
 			toxic,
 			scanCtx,
-		))
+		)
+		result.InstallationID = inst.InstallationID
+		result.AppID = inst.AppID
+		result.HTMLURL = inst.HTMLURL
+		result.Permissions = inst.Permissions
+		if orgNoNearMisses {
+			result.NearMisses = nil
+		}
+		results = append(results, result)
 	}
 
 	report := eval.OrgScanResult{

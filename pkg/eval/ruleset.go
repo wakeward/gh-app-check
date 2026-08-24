@@ -26,16 +26,20 @@ type NearMiss struct {
 // AppAuditResult is the outcome of evaluating one GitHub App installation
 // against the least-privilege rules engine and toxic-combination catalog.
 type AppAuditResult struct {
-	AppSlug         string       `json:"app_slug"`
-	AppName         string       `json:"app_name,omitempty"`
-	Owner           string       `json:"owner"`
-	RepoSelection   string       `json:"repo_selection"` // "all" or "selected"
-	WriteScopeCount int          `json:"write_scope_count"`
-	RiskLevel       string       `json:"risk_level"` // "CRITICAL", "HIGH", "WARN", "PASS"
-	Violations      []string     `json:"violations"`
-	ToxicMatches    []ToxicMatch `json:"toxic_matches"`
-	NearMisses      []NearMiss   `json:"near_misses"`
-	GHESScopes      []string     `json:"ghes_scopes,omitempty"`
+	InstallationID  int64             `json:"installation_id,omitempty"`
+	AppID           int64             `json:"app_id,omitempty"`
+	AppSlug         string            `json:"app_slug"`
+	AppName         string            `json:"app_name,omitempty"`
+	HTMLURL         string            `json:"html_url,omitempty"`
+	Owner           string            `json:"owner"`
+	RepoSelection   string            `json:"repo_selection"` // "all" or "selected"
+	Permissions     map[string]string `json:"permissions,omitempty"`
+	WriteScopeCount int               `json:"write_scope_count"`
+	RiskLevel       string            `json:"risk_level"` // "CRITICAL", "HIGH", "WARN", "PASS"
+	Violations      []string          `json:"violations"`
+	ToxicMatches    []ToxicMatch      `json:"toxic_matches"`
+	NearMisses      []NearMiss        `json:"near_misses"`
+	GHESScopes      []string          `json:"ghes_scopes,omitempty"`
 }
 
 // OrgScanResult is the full output of an organization audit including scan metadata.
@@ -119,11 +123,14 @@ func EvaluateWithContext(appSlug, appName, owner string, inst rules.Installation
 				Technique: match.Combination.Technique,
 				Blast:     string(match.Combination.BlastRadius),
 			})
-			result.Violations = append(result.Violations, fmt.Sprintf(
+			msg := fmt.Sprintf(
 				"toxic combination: %s (%s)",
 				match.Combination.Technique,
 				match.Combination.BlastRadius,
-			))
+			)
+			if !stringSliceContains(result.Violations, msg) {
+				result.Violations = append(result.Violations, msg)
+			}
 			raiseRisk(&result, blastToRisk(match.Combination.BlastRadius))
 		}
 		for _, near := range toxicResult.NearMisses {
@@ -166,4 +173,13 @@ func blastToRisk(blast graphmodel.BlastRadius) string {
 
 func formatMissingGrant(grant graphmodel.PermissionGrant) string {
 	return fmt.Sprintf("%s:%s", grant.APIKey, grant.Access)
+}
+
+func stringSliceContains(items []string, target string) bool {
+	for _, item := range items {
+		if item == target {
+			return true
+		}
+	}
+	return false
 }

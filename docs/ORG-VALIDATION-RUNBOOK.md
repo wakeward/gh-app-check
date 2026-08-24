@@ -57,8 +57,9 @@ Replace ORG with my org slug when I provide it.
 
 gh auth status
 gh auth refresh -s read:org
-go build ./...
+go build -o gh-app-check .
 go test ./...
+gh extension install . --force
 
 ### B. Core org scan (default)
 

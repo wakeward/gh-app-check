@@ -10,7 +10,7 @@ var traceOrg string
 
 var traceCmd = &cobra.Command{
 	Use:   "trace <app-slug>",
-	Short: "Audit the execution plane for a specific app's credential usage",
+	Short: "Audit the execution plane for a specific app's credential usage (Phase 2 - not implemented)",
 	Long: `Searches the organization's codebase for usage of the given GitHub App
 slug and inspects the discovered Actions workflows for insecure token
 generation patterns (missing repositories/permissions scoping, leaked keys).`,

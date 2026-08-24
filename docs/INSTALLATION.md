@@ -10,6 +10,19 @@ Install the extension directly via the GitHub CLI:
 gh extension install wakeward/gh-app-check
 ```
 
+### Local development (sibling checkout)
+
+`go build ./...` compiles packages but does **not** emit the extension binary.
+Build the command explicitly, then install from the repo root:
+
+```bash
+go build -o gh-app-check .
+gh extension install . --force
+```
+
+Without `gh-app-check` on disk, `gh extension install .` fails with
+`fork/exec .../gh-app-check: no such file or directory`.
+
 ### Prerequisites
 
 Listing organization installations requires a token that can read organization
@@ -95,14 +108,25 @@ Error: failed to fetch installations: GET https://api.github.com/orgs/my-org/ins
 
 **Cause:**
 
-The GitHub API endpoint for listing organization installations is strictly locked down. This error means one of two things:
+The GitHub API endpoint for listing organization installations requires
+**organization admin or owner** membership. This is an **org role** check, not
+merely an OAuth scope check.
 
-1. **You lack org-wide visibility.** Repository admins cannot necessarily list organization-wide app installations.
-2. **Missing OAuth scopes:** your `gh` CLI token lacks the necessary permissions.
+Common cases:
 
-**Resolution:**
+1. **Org member, not admin.** `read:org` is present but the account is only a
+   member on that org. The same token may work on a different org where you are
+   admin.
+2. **Wrong org slug** or no access to the org at all.
 
-Ensure your account is an organization **admin** (or owner), then re-authenticate with at least `read:org`:
+**False lead:** `gh` may suggest `gh auth refresh -s admin:org` on 404. Adding
+`admin:org` does **not** grant org admin role. Verify membership role first:
+
+```bash
+gh api orgs/my-org/memberships/$(gh api user -q .login) -q .role
+```
+
+You need `admin` or `owner`. Re-authenticate with `read:org` if scopes are missing:
 
 ```bash
 gh auth login --scopes "read:org,repo"

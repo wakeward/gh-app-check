@@ -10,8 +10,11 @@ import (
 // OrgInstallation is the subset of a GitHub App installation needed for
 // Phase 1 control-plane auditing.
 type OrgInstallation struct {
+	InstallationID      int64
+	AppID               int64
 	Slug                string
 	Name                string
+	HTMLURL             string
 	RepositorySelection string
 	Permissions         map[string]string
 }
@@ -45,8 +48,11 @@ func ListOrgInstallations(ctx context.Context, client *github.Client, org string
 				return nil, fmt.Errorf("installation %q: %w", slug, err)
 			}
 			out = append(out, OrgInstallation{
+				InstallationID:      inst.GetID(),
+				AppID:               inst.GetAppID(),
 				Slug:                slug,
 				Name:                name,
+				HTMLURL:             inst.GetHTMLURL(),
 				RepositorySelection: inst.GetRepositorySelection(),
 				Permissions:         perms,
 			})
