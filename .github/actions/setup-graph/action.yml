@@ -1,6 +1,11 @@
 name: Setup gh-app-graph dependency
 description: Check out gh-app-graph for CI builds while go.mod uses a local replace.
 
+inputs:
+  token:
+    description: GitHub token with read access to wakeward/gh-app-graph (required while that repo is private)
+    required: true
+
 runs:
   using: composite
   steps:
@@ -9,6 +14,7 @@ runs:
       with:
         repository: wakeward/gh-app-graph
         path: gh-app-graph
+        token: ${{ inputs.token }}
 
     - name: Point go.mod replace at checked-out graph
       shell: bash

@@ -33,6 +33,8 @@ jobs:
 
       - name: Setup gh-app-graph dependency
         uses: ./.github/actions/setup-graph
+        with:
+          token: ${{ secrets.GH_GRAPH_READ_TOKEN }}
 
       - name: Run golangci-lint
         uses: reviewdog/action-golangci-lint@c76cceaaab89abe74e649d2e34c6c9adc26662d2 # v2

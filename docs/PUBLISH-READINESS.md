@@ -3,7 +3,7 @@
 Living checklist for taking `gh-app-check` and sibling `gh-app-graph` public.
 See also [`GITHUB_SETUP_RUNBOOK.md`](GITHUB_SETUP_RUNBOOK.md) for GitHub settings.
 
-## Phase A - Policy, scrub, OSS hygiene (in progress)
+## Phase A - Policy, scrub, OSS hygiene (done)
 
 - [ ] `organization-takeover` single-grant policy decided (see gh-app-graph `docs/calibration-notes.md`)
 - [x] Doc accuracy: trace, SARIF, `notable_grants`, graph README typo, `evaluate-app` stub
@@ -14,8 +14,10 @@ See also [`GITHUB_SETUP_RUNBOOK.md`](GITHUB_SETUP_RUNBOOK.md) for GitHub setting
 
 ## Phase B - Release prep (private)
 
-- [ ] Tag `gh-app-graph` v0.1.0
+- [x] Fix CI graph checkout (composite action; requires `GH_GRAPH_READ_TOKEN` while graph is private)
+- [x] Bump Go to 1.26.6 (stdlib govulncheck fixes on graph)
 - [ ] Pin graph in `gh-app-check` `go.mod`; drop `replace`
+- [ ] Drop `GH_GRAPH_READ_TOKEN` secret after graph is public / module pinned
 - [ ] GoReleaser + signed release workflow (Cosign, SBOM, SLSA)
 - [ ] Apply branch protection + secret scanning (see setup runbook)
 - [x] Extend CI path filters to `data/**` (graph); add `go test` to `refresh.yml`

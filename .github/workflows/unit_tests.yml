@@ -33,6 +33,8 @@ jobs:
 
       - name: Setup gh-app-graph dependency
         uses: ./.github/actions/setup-graph
+        with:
+          token: ${{ secrets.GH_GRAPH_READ_TOKEN }}
 
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

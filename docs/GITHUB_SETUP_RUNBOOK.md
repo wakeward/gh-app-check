@@ -12,6 +12,20 @@ gh auth status
 
 You need admin access on each repository to configure branch protection.
 
+### gh-app-check CI secret (while `gh-app-graph` is private)
+
+Cross-repo checkout in CI needs a token that can read the private graph repo.
+Create a fine-grained PAT (read-only on `wakeward/gh-app-graph`) or classic PAT
+with `repo` scope, then:
+
+```bash
+gh secret set GH_GRAPH_READ_TOKEN -R wakeward/gh-app-check
+# paste token at prompt
+```
+
+Remove this secret after `gh-app-graph` is public and CI uses a tagged module
+instead of checkout (Phase B pin).
+
 ---
 
 ## Branch protection (solo maintainer)
