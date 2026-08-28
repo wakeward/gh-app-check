@@ -1,6 +1,6 @@
 # gh-app-check
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/wakeward/gh-app-check/badge)](https://securityscorecards.dev/viewer/?uri=github.com/wakeward/gh-app-check)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/wakeward/gh-app-check/badge)](https://scorecard.dev/viewer/?uri=github.com/wakeward/gh-app-check)
 [![Release](https://img.shields.io/github/v/release/wakeward/gh-app-check)](https://github.com/wakeward/gh-app-check/releases)
 [![License](https://img.shields.io/github/license/wakeward/gh-app-check)](LICENSE)
 

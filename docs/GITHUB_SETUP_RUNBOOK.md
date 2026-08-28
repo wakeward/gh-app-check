@@ -156,7 +156,7 @@ gh api "repos/wakeward/gh-app-check/actions/workflows" \
   | jq '.workflows[] | select(.name=="Scorecard supply-chain security")'
 ```
 
-Badge: `https://securityscorecards.dev/viewer/?uri=github.com/wakeward/gh-app-check`
+Badge: `https://scorecard.dev/viewer/?uri=github.com/wakeward/gh-app-check`
 
 ---
 
