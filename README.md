@@ -1,7 +1,6 @@
 # gh-app-check
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/wakeward/gh-app-check/badge)](https://securityscorecards.dev/viewer/?uri=github.com/wakeward/gh-app-check)
-[![Go Report Card](https://goreportcard.com/badge/github.com/wakeward/gh-app-check)](https://goreportcard.com/report/github.com/wakeward/gh-app-check)
 [![Release](https://img.shields.io/github/v/release/wakeward/gh-app-check)](https://github.com/wakeward/gh-app-check/releases)
 [![License](https://img.shields.io/github/license/wakeward/gh-app-check)](LICENSE)
 
@@ -73,8 +72,8 @@ go vet ./...
 go test ./...
 ```
 
-Without a `replace` line, `go mod download` needs `GOPRIVATE=github.com/wakeward/*`
-and credentials while `gh-app-graph` is private.
+Without a `replace` line, `go mod download` fetches `github.com/wakeward/gh-app-graph`
+from the public module proxy.
 
 Product improvement backlog: [`docs/improvement-backlog.md`](docs/improvement-backlog.md).
 Publish checklist: [`docs/PUBLISH-READINESS.md`](docs/PUBLISH-READINESS.md).
@@ -88,7 +87,7 @@ This project takes supply chain security seriously.
 - Dependency updates go through an explicit 48-hour cooldown window before being proposed (`.github/dependabot.yml`), to avoid pulling in just-published (and potentially compromised) releases.
 - `gosec` and `govulncheck` run as blocking checks on every pull request.
 - OpenSSF Scorecard runs on every push, pull request, and branch protection change.
-- Future releases will be signed keylessly using **Sigstore/Cosign**, include an SPDX Software Bill of Materials (SBOM), and generate **SLSA Level 3** provenance attestations.
+- Releases are signed with GPG tags; release artifacts use **Sigstore/Cosign** with SPDX SBOM (see [releases](https://github.com/wakeward/gh-app-check/releases)).
 
 Please refer to [SECURITY.md](SECURITY.md) for vulnerability reporting guidelines.
 Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
