@@ -1,0 +1,51 @@
+version: 2
+
+project_name: gh-app-check
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: gh-app-check
+    main: .
+    binary: gh-app-check
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - formats:
+      - binary
+    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}-{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+sboms:
+  - artifacts: archive
+
+signs:
+  - cmd: cosign
+    certificate-identity-regexp: '^https://github.com/wakeward/gh-app-check/.github/workflows/release.yml@refs/tags/v'
+    certificate-oidc-issuer: https://token.actions.githubusercontent.com
+    artifacts: checksum
+
+changelog:
+  use: github
+
+release:
+  github:
+    owner: wakeward
+    name: gh-app-check
+  prerelease: auto

@@ -1,0 +1,23 @@
+name: Setup private Go modules
+description: Configure GOPRIVATE and git credentials to fetch private github.com/wakeward modules.
+
+inputs:
+  token:
+    description: GitHub token with read access to private wakeward modules (until repos are public)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Configure git for private modules
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+      run: |
+        git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+        echo "GOPRIVATE=github.com/wakeward/*" >> "$GITHUB_ENV"
+        echo "GONOSUMDB=github.com/wakeward/*" >> "$GITHUB_ENV"
+
+    - name: Download modules
+      shell: bash
+      run: go mod download
