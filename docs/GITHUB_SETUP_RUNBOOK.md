@@ -12,20 +12,13 @@ gh auth status
 
 You need admin access on each repository to configure branch protection.
 
-### gh-app-check CI secret (while `gh-app-graph` is private)
+### gh-app-check CI (graph module fetch)
 
-CI fetches `github.com/wakeward/gh-app-graph` as a tagged Go module (v0.1.0+).
-Private module download needs a token with read access to `wakeward/gh-app-graph`:
+Both repos are **public**. CI downloads `github.com/wakeward/gh-app-graph` from
+the public Go module proxy (`go mod download`). No extra GitHub secret is required.
 
-```bash
-gh secret set GH_GRAPH_READ_TOKEN -R wakeward/gh-app-check
-# paste token at prompt
-```
-
-Also set as a **Dependabot secret** with the same name so Dependabot PR workflows
-can download the private module.
-
-Remove this secret after `gh-app-graph` is public (Phase D).
+If you previously set `GH_GRAPH_READ_TOKEN` while `gh-app-graph` was private, delete
+it from **Settings → Secrets and variables → Actions** (and Dependabot secrets).
 
 ---
 
@@ -136,7 +129,7 @@ gh api --method PATCH "repos/${REPO}" \
 CodeQL default setup (Go):
 
 ```bash
-gh api --method PUT "repos/${REPO}/code-scanning/default-setup" \
+gh api --method PATCH "repos/${REPO}/code-scanning/default-setup" \
   -f state=configured \
   -f query_suite=default \
   -f 'languages[]=go'

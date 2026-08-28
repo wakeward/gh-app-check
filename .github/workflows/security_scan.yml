@@ -36,10 +36,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Setup private Go modules
-        uses: ./.github/actions/setup-private-modules
-        with:
-          token: ${{ secrets.GH_GRAPH_READ_TOKEN }}
+      - name: Download modules
+        run: go mod download
 
       - name: Add GOPATH/bin to PATH
         run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"

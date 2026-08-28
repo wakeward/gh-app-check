@@ -12,37 +12,37 @@ See also [`GITHUB_SETUP_RUNBOOK.md`](GITHUB_SETUP_RUNBOOK.md) for GitHub setting
 - [x] Generalize internal validation notes in `improvement-backlog.md`
 - [x] Mark `ORG-VALIDATION-RUNBOOK.md` as maintainer-only template
 
-## Phase B - Release prep (private)
+## Phase B - Release prep (done)
 
-- [x] Fix CI graph checkout (composite action; requires `GH_GRAPH_READ_TOKEN` while graph is private)
+- [x] Fix CI graph checkout (composite action while graph was private)
 - [x] Bump Go to 1.26.6 (stdlib govulncheck fixes on graph)
-- [x] Pin graph in `gh-app-check` `go.mod` at v0.1.0; drop `replace`
-- [ ] Drop `GH_GRAPH_READ_TOKEN` secret after graph is public
+- [x] Pin graph in `gh-app-check` `go.mod` at v0.1.1; drop `replace`
+- [x] Drop `GH_GRAPH_READ_TOKEN` from CI (graph public; use `go mod download`)
 - [x] GoReleaser + signed release workflow (Cosign, SBOM)
-- [ ] Signed GPG tags on all releases (see setup runbook)
-- [ ] Apply branch protection + secret scanning (see setup runbook; after public)
+- [x] Signed GPG tags on graph releases (`v0.1.0`, `v0.1.1`)
+- [x] Branch protection + secret scanning + CodeQL default setup (see setup runbook)
 - [x] Extend CI path filters to `data/**` (graph); add `go test` to `refresh.yml`
-- [x] CodeQL analysis workflow
+- [x] CodeQL default setup (custom workflow removed)
 
-## Phase C - History reset
+## Phase C - History reset (done)
 
-- [ ] Scrub working tree (this checklist + FEEDBACK gitignore verified)
-- [ ] Orphan squash → single commit per repo (`Initial public release v0.1.0`)
-- [ ] Re-create **GPG-signed** `v0.1.0` tags on squashed commits; force-push tags
-- [ ] New public remote or force-push (explicit approval required)
+- [x] Orphan squash to single commit per repo
+- [x] GPG-signed tags on squashed commits (`gh-app-graph` v0.1.0 / v0.1.1)
+- [x] Mirror backups under operator home directory
 
-## Phase D - Publish
+## Phase D - Publish (in progress)
 
-- [ ] Flip repo visibility public
-- [ ] Cut `gh-app-check` v0.1.0 release (binary for `gh extension install`)
-- [ ] Verify OpenSSF Scorecard badge
+- [x] Flip repo visibility public
+- [ ] Merge finish-publish PR (drop private-module CI, token-permissions on release.yml)
+- [ ] Cut `gh-app-check` v0.1.0 release (signed tag push → GoReleaser binaries)
+- [ ] Smoke test: `gh extension install wakeward/gh-app-check`
+- [ ] Verify OpenSSF Scorecard badge (expect low solo scores; see runbook)
 - [ ] Announce with DRAFT catalog disclaimer (graph)
 
 ## Sensitive-data audit (2026-08-24)
 
 Git history search found **no** customer org names, app slugs, or tokens.
-Generic validation metadata and Cursor co-author trailers exist in history;
-orphan squash removes both.
+Orphan squash removed generic Cursor co-author trailers from public history.
 
 ## OpenSSF Scorecard target (solo maintainer)
 
