@@ -43,13 +43,13 @@ jobs:
       # golang/go#78345) - both are worse supply-chain choices than pinning
       # the Go module version ourselves.
       - name: Install govulncheck (pinned)
-        run: go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
 
       - name: Run govulncheck
         run: govulncheck ./...
 
       - name: Install gosec (pinned)
-        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.28.0
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
 
       - name: Run gosec
         run: gosec ./...
