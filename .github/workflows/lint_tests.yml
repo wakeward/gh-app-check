@@ -35,4 +35,4 @@ jobs:
         run: go mod download
 
       - name: Run golangci-lint
-        uses: reviewdog/action-golangci-lint@c76cceaaab89abe74e649d2e34c6c9adc26662d2 # v2
+        uses: reviewdog/action-golangci-lint@db65103266f304d8ac929ad6c0cd02d14f6837ba # v2
