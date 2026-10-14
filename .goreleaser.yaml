@@ -37,11 +37,11 @@ sboms:
 
 signs:
   - cmd: cosign
-    certificate: "${artifact}.pem"
+    # Cosign v3 writes one Sigstore bundle. --output-signature is ignored.
+    signature: "${artifact}.sigstore.json"
     args:
       - sign-blob
-      - "--output-certificate=${certificate}"
-      - "--output-signature=${signature}"
+      - "--bundle=${signature}"
       - "${artifact}"
       - "--yes"
     artifacts: checksum
