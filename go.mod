@@ -1,6 +1,6 @@
 module github.com/wakeward/gh-app-check
 
-go 1.26.10
+go 1.26.11
 
 require (
 	github.com/cli/go-gh/v2 v2.17.0
